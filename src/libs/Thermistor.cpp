@@ -15,6 +15,12 @@ char msg[MSG_BUFFER_SIZE];
 
 #ifdef ESP32
 #define ADC_RES (4096.0)
+#define ADC_th (2499.778865502888)
+#define ADC_a (-1.899899879087783e-04)
+#define ADC_b (1.961955687412854)
+#define ADC_c (-1009.271504480745)
+#define ADC_a_lin (1.012089774549827)
+#define ADC_b_lin (177.9558625375548)
 #else
 #define ADC_RES (1024.0)
 #endif
@@ -95,5 +101,18 @@ double Thermistor::getADC()
     delay(5);
     val += analogRead(this->channel);
   }
+#ifdef ESP32
+  double temp = (double)(val >> 4);
+  // nonlinearity of ESP32 ADC -> counter by transfer function (linear + tangential quadratic)
+  if (temp < ADC_th)
+  {
+    return ADC_a_lin * temp + ADC_b_lin;
+  }
+  else
+  {
+    return ADC_a * temp * temp + ADC_b * temp + ADC_c;
+  }
+#else
   return (double)(val >> 4);
+#endif
 }
