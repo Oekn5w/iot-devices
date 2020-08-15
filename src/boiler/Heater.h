@@ -22,7 +22,10 @@ class Heater
     String topic_status;
     byte pin;
     bool state;
-}
+    bool state_published;
+
+    void publish();
+};
 
 
 #endif

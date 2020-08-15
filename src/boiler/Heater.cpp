@@ -17,6 +17,7 @@ Heater::Heater(byte pin, String topic_status, PubSubClient * mqttclient)
   this->mqttclient = mqttclient;
   this->topic_status = topic_status;
   this->state = false;
+  this->state_published = false;
 }
 
 void Heater::setup()
@@ -33,6 +34,23 @@ void Heater::loop()
   {
     this->turn_off();
   }
+  if(!this->state_published && mqttclient->connected())
+  {
+    this->publish();
+  }
+}
+
+void Heater::publish()
+{
+  if(mqttclient->connected())
+  {
+    mqttclient->publish(topic_status.c_str(), this->state ? PAYLOAD_HEATER_ON : PAYLOAD_HEATER_OFF);
+    this->state_published = true;
+  }
+  else
+  {
+    this->state_published = false;
+  }
 }
 
 void Heater::turn_on()
@@ -42,7 +60,7 @@ void Heater::turn_on()
   {
     this->state = true;
     digitalWrite(this->pin, PIN_ON);
-    mqttclient->publish(topic_status.c_str(), PAYLOAD_HEATER_ON);
+    this->publish();
   }
 }
 
@@ -53,6 +71,6 @@ void Heater::turn_off()
   {
     this->state = false;
     digitalWrite(this->pin, PIN_OFF);
-    mqttclient->publish(topic_status.c_str(), PAYLOAD_HEATER_OFF);
+    this->publish();
   }
 }
