@@ -57,9 +57,14 @@ void Thermistor::setup()
 
 void Thermistor::loop()
 {
-  if (millis() > this->next_query)
+  unsigned long uptime = millis();
+  if (uptime > this->next_query)
   {
     this->next_query += REPORT_INTERVAL;
+    if (uptime > this->next_query)
+    {
+      this->next_query = uptime + REPORT_INTERVAL;
+    }
     double temperature = this->getTemp();
     snprintf (msg, MSG_BUFFER_SIZE, "%.1f", temperature);
     mqttClient->publish(topic.c_str(), msg);
@@ -86,6 +91,7 @@ uint16_t Thermistor::getADC()
   val = 0;
   for (byte i = 0; i<16; ++i)
   {
+    delay(5);
     val += analogRead(this->channel);
   }
   return val >> 4;
