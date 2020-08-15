@@ -1,7 +1,7 @@
 #include "Thermistor.h"
 #include "math.h"
 
-#define R1 (2400) // in Ohm
+#define R1 (2400.0) // in Ohm
 
 const double values_B3988[] = {1.125181376127538e-03, 2.347420615672053e-04, 8.536313443746071e-08};
 const double values_B4300[] = {1.295546029021604e-03, 2.158573800965529e-04, 8.980104686571273e-08};
@@ -14,9 +14,9 @@ char msg[MSG_BUFFER_SIZE];
 #endif
 
 #ifdef ESP32
-#define ADC_RES (4096)
+#define ADC_RES (4096.0)
 #else
-#define ADC_RES (1024)
+#define ADC_RES (1024.0)
 #endif
 
 #define REPORT_INTERVAL 5000
@@ -81,18 +81,19 @@ double Thermistor::getTemp()
 
 double Thermistor::getResistance()
 {
-  uint16_t ADCval = this->getADC();
-
+  double ADCval = this->getADC();
+  double Rth = (1.0 * R1 * ADCval)/(1.0 * ADC_RES - ADCval);
+  return Rth;
 }
 
-uint16_t Thermistor::getADC()
+double Thermistor::getADC()
 {
   uint16_t val = analogRead(this->channel);
   val = 0;
-  for (byte i = 0; i<16; ++i)
+  for (uint8_t i = 0; i<16; ++i)
   {
     delay(5);
     val += analogRead(this->channel);
   }
-  return val >> 4;
+  return (double)(val >> 4);
 }

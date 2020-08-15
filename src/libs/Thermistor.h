@@ -28,7 +28,7 @@ class Thermistor
 
     double getTemp();
     double getResistance();
-    uint16_t getADC();
+    double getADC();
 
 };
 
