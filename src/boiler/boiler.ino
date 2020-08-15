@@ -10,8 +10,8 @@
 #define TOPIC_STATUS_BOARD "boiler/board/status"
 #define TOPIC_CONTROL_HEATER "boiler/water/heater/set"
 #define TOPIC_STATUS_HEATER "boiler/water/heater/status"
-#define PAYLOAD_BOARD_AVAIL "running"
-#define PAYLOAD_BOARD_NA "dead"
+#define PAYLOAD_BOARD_AVAIL "online"
+#define PAYLOAD_BOARD_NA "offline"
 
 #define MQTT_CLIENT_ID "ESP32-Boiler"
 
@@ -81,8 +81,9 @@ void attempt_reconnect()
 {
   if (!client.connected())
   {
-    if (client.connect(MQTT_CLIENT_ID, SECRET_MQTT_USER, SECRET_MQTT_PASSWORD))
+    if (client.connect(MQTT_CLIENT_ID, SECRET_MQTT_USER, SECRET_MQTT_PASSWORD, TOPIC_STATUS_BOARD, 0, true, PAYLOAD_BOARD_NA))
     {
+      client.publish(TOPIC_STATUS_BOARD, PAYLOAD_BOARD_AVAIL, true);
       client.subscribe(TOPIC_CONTROL_HEATER);
     }
     else
