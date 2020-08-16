@@ -44,7 +44,7 @@ void Heater::publish()
 {
   if(mqttclient->connected())
   {
-    mqttclient->publish(topic_status.c_str(), this->state ? PAYLOAD_HEATER_ON : PAYLOAD_HEATER_OFF);
+    mqttclient->publish(topic_status.c_str(), this->state ? PAYLOAD_HEATER_ON : PAYLOAD_HEATER_OFF, true);
     this->state_published = true;
   }
   else
