@@ -20,15 +20,15 @@ class Thermistor
     void loop();
 
   private:
-    const double* pvalues;
+    const float* pvalues;
     byte channel;
     String topic;
     unsigned long next_query;
     PubSubClient* mqttClient;
 
-    double getTemp();
-    double getResistance();
-    double getADC();
+    float getTemp();
+    float getResistance();
+    float getADC();
 
 };
 

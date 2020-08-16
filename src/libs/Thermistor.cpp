@@ -1,11 +1,11 @@
 #include "Thermistor.h"
 #include "math.h"
 
-#define R1 (2400.0) // in Ohm
+#define R1 (2400.0f) // in Ohm
 
-const double values_B3988[] = {1.125181376127538e-03, 2.347420615672053e-04, 8.536313443746071e-08};
-const double values_B4300[] = {1.295546029021604e-03, 2.158573800965529e-04, 8.980104686571273e-08};
-#define T0 (273.16)
+const float values_B3988[] = {1.125181376127538e-03f, 2.347420615672053e-04f, 8.536313443746071e-08f};
+const float values_B4300[] = {1.295546029021604e-03f, 2.158573800965529e-04f, 8.980104686571273e-08f};
+#define T0 (273.16f)
 #define MSG_BUFFER_SIZE	(10)
 char msg[MSG_BUFFER_SIZE];
 
@@ -14,18 +14,18 @@ char msg[MSG_BUFFER_SIZE];
 #endif
 
 #ifdef ESP32
-#define ADC_RES (4096.0)
-#define ADC_th (2499.778865502888)
-#define ADC_a (-1.899899879087783e-04)
-#define ADC_b (1.961955687412854)
-#define ADC_c (-1009.271504480745)
-#define ADC_a_lin (1.012089774549827)
-#define ADC_b_lin (177.9558625375548)
+#define ADC_RES (4096.0f)
+#define ADC_th (2499.778865502888f)
+#define ADC_a (-1.899899879087783e-04f)
+#define ADC_b (1.961955687412854f)
+#define ADC_c (-1009.271504480745f)
+#define ADC_a_lin (1.012089774549827f)
+#define ADC_b_lin (177.9558625375548f)
 #else
 #define ADC_RES (1024.0)
 #endif
 
-#define REPORT_INTERVAL 5000
+#define REPORT_INTERVAL 20000
 
 #ifdef ESP32
 Thermistor::Thermistor(byte channel, Type type, String topic, PubSubClient * mqttClient)
@@ -71,28 +71,28 @@ void Thermistor::loop()
     {
       this->next_query = uptime + REPORT_INTERVAL;
     }
-    double temperature = this->getTemp();
+    float temperature = this->getTemp();
     snprintf (msg, MSG_BUFFER_SIZE, "%.1f", temperature);
     mqttClient->publish(topic.c_str(), msg);
   }
 }
 
-double Thermistor::getTemp()
+float Thermistor::getTemp()
 {
-  double Rth = this->getResistance();
-  double temp = log(Rth);
-  double temp2 = pvalues[0] + pvalues[1] * temp + pvalues[2] * temp * temp * temp;
+  float Rth = this->getResistance();
+  float temp = log(Rth);
+  float temp2 = pvalues[0] + pvalues[1] * temp + pvalues[2] * temp * temp * temp;
   return (1.0 / temp2 - T0);
 }
 
-double Thermistor::getResistance()
+float Thermistor::getResistance()
 {
-  double ADCval = this->getADC();
-  double Rth = (1.0 * R1 * ADCval)/(1.0 * ADC_RES - ADCval);
+  float ADCval = this->getADC();
+  float Rth = (1.0 * R1 * ADCval)/(1.0 * ADC_RES - ADCval);
   return Rth;
 }
 
-double Thermistor::getADC()
+float Thermistor::getADC()
 {
   uint16_t val = analogRead(this->channel);
   val = 0;
@@ -102,7 +102,7 @@ double Thermistor::getADC()
     val += analogRead(this->channel);
   }
 #ifdef ESP32
-  double temp = (double)(val >> 4);
+  float temp = (float)(val >> 4);
   // nonlinearity of ESP32 ADC -> counter by transfer function (linear + tangential quadratic)
   if (temp < ADC_th)
   {
@@ -113,6 +113,6 @@ double Thermistor::getADC()
     return ADC_a * temp * temp + ADC_b * temp + ADC_c;
   }
 #else
-  return (double)(val >> 4);
+  return (float)(val >> 4);
 #endif
 }
