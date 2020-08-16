@@ -1,9 +1,16 @@
 #include "../secrets_general.h"
+#include "secrets.h"
 
 #include "WiFi.h"
 #include "PubSubClient.h"
 #include "Thermistor.h"
 #include "Heater.h"
+
+// not including the two headers here makes it failing to find them,
+// might be solved with #110 on makeEspArduino
+#include "Update.h"
+#include "ESPmDNS.h"
+#include "ArduinoOTA.h"
 
 #define TOPIC_TEMP_WATER "boiler/water/temperature"
 #define TOPIC_TEMP_BOARD "boiler/board/temperature"
@@ -12,6 +19,7 @@
 #define TOPIC_STATUS_HEATER "boiler/water/heater/status"
 #define PAYLOAD_BOARD_AVAIL "online"
 #define PAYLOAD_BOARD_NA "offline"
+#define PAYLOAD_BOARD_OTA "offline -- OTA-update"
 
 #define MQTT_CLIENT_ID "ESP32-Boiler"
 
@@ -36,6 +44,40 @@ void setup()
     Serial.print(".");
   }
 
+  ArduinoOTA.setPassword(SECRET_OTA_PWD);
+
+  ArduinoOTA
+    .onStart([]() {
+      if (client.connected())
+      {
+        client.publish(TOPIC_STATUS_BOARD, PAYLOAD_BOARD_OTA, true);
+      }
+      String type;
+      if (ArduinoOTA.getCommand() == U_FLASH)
+        type = "sketch";
+      else // U_SPIFFS
+        type = "filesystem";
+
+      // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+      Serial.println("Start updating " + type);
+    })
+    .onEnd([]() {
+      Serial.println("\nEnd");
+    })
+    .onProgress([](unsigned int progress, unsigned int total) {
+      Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+    })
+    .onError([](ota_error_t error) {
+      Serial.printf("Error[%u]: ", error);
+      if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+      else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+      else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+      else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+      else if (error == OTA_END_ERROR) Serial.println("End Failed");
+    });
+
+  ArduinoOTA.begin();
+
   client.setServer(SECRET_MQTT_HOST, 1883);
 
   Therm_Board.setup();
@@ -47,6 +89,7 @@ void setup()
 
 void loop()
 {
+  ArduinoOTA.handle();
   if (!client.connected()) {
     attempt_reconnect();
   }
