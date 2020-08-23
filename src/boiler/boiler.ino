@@ -1,4 +1,5 @@
 #include "../secrets_general.h"
+#include "../config_general.h"
 #include "secrets.h"
 
 #include "WiFi.h"
@@ -11,17 +12,6 @@
 #include "Update.h"
 #include "ESPmDNS.h"
 #include "ArduinoOTA.h"
-
-#define TOPIC_TEMP_WATER "boiler/water/temperature"
-#define TOPIC_TEMP_BOARD "boiler/board/temperature"
-#define TOPIC_STATUS_BOARD "boiler/board/status"
-#define TOPIC_CONTROL_HEATER "boiler/water/heater/set"
-#define TOPIC_STATUS_HEATER "boiler/water/heater/status"
-#define PAYLOAD_BOARD_AVAIL "online"
-#define PAYLOAD_BOARD_NA "offline"
-#define PAYLOAD_BOARD_OTA "offline -- OTA-update"
-
-#define MQTT_CLIENT_ID "ESP32-Boiler"
 
 WiFiClient espclient;
 PubSubClient client(espclient);
@@ -37,7 +27,9 @@ void setup()
 {
   Serial.begin(115200);
 
+  WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE);
   WiFi.begin(SECRET_WIFI_SSID, SECRET_WIFI_PASSWORD);
+  WiFi.setHostname(MQTT_CLIENT_ID);
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
