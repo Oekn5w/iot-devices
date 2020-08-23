@@ -10,7 +10,7 @@ class Thermistor
       B3988,
       B4300
     };
-#if CHIP==esp32
+#if ESP32 == 1
     Thermistor(byte channel, Type type, String topic, PubSubClient * mqttClient);
 #else
     Thermistor(Type type, String topic, PubSubClient * mqttClient);

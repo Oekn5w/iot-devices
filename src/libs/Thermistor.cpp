@@ -9,11 +9,7 @@ const float values_B4300[] = {1.295546029021604e-03f, 2.158573800965529e-04f, 8.
 #define MSG_BUFFER_SIZE	(10)
 char msg[MSG_BUFFER_SIZE];
 
-#if CHIP==esp32
-#define ESP32
-#endif
-
-#ifdef ESP32
+#if ESP32 == 1
 #define ADC_RES (4096.0f)
 #define ADC_th (2499.778865502888f)
 #define ADC_a (-1.899899879087783e-04f)
@@ -27,13 +23,13 @@ char msg[MSG_BUFFER_SIZE];
 
 #define REPORT_INTERVAL 20000
 
-#ifdef ESP32
+#if ESP32 == 1
 Thermistor::Thermistor(byte channel, Type type, String topic, PubSubClient * mqttClient)
 #else
 Thermistor::Thermistor(Type type, String topic, PubSubClient * mqttClient)
 #endif
 {
-#ifdef ESP32
+#if ESP32 == 1
   this->channel = channel;
 #else
   this->channel = A0;
@@ -54,10 +50,9 @@ Thermistor::Thermistor(Type type, String topic, PubSubClient * mqttClient)
 void Thermistor::setup()
 {
   this->next_query = millis();
-#ifdef ESP32
+#if ESP32 == 1
   analogReadResolution(12);
   analogSetPinAttenuation(this->channel, ADC_11db);
-#else
 #endif
 }
 
@@ -101,7 +96,7 @@ float Thermistor::getADC()
     delay(5);
     val += analogRead(this->channel);
   }
-#ifdef ESP32
+#if ESP32 == 1
   float temp = (float)(val >> 4);
   // nonlinearity of ESP32 ADC -> counter by transfer function (linear + tangential quadratic)
   if (temp < ADC_th)
