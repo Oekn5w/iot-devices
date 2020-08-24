@@ -7,4 +7,18 @@ CUSTOM_LIBS := $(realpath $(THIS_DIR)/../libs)
 
 ESP32 := 0
 
+ifdef SHUTTER_ID
+SHUTTER_SINGLE_ID := $(SHUTTER_ID)
+endif
+
+ifndef SHUTTER_SINGLE_ID
+SHUTTER_SINGLE_ID := 0
+endif
+
+ifneq ($(SHUTTER_SINGLE_ID), 0)
+BUILD_DIR := $(THIS_DIR)/build-id$(SHUTTER_SINGLE_ID)
+endif
+
+include $(THIS_DIR)/secrets.mk
+
 include $(ESP_DEP_ROOT)/makeEspArduino/makeEspArduino.mk
