@@ -1,6 +1,8 @@
 #include "../secrets_general.h"
 #include "../config_general.h"
+#include "config.h"
 #include "secrets.h"
+#include <buildinfo.h>
 
 #include "WiFi.h"
 #include "PubSubClient.h"
@@ -16,9 +18,9 @@
 WiFiClient espclient;
 PubSubClient client(espclient);
 
-Thermistor Therm_Boiler(35, Thermistor::Type::B3988, TOPIC_TEMP_WATER, &client);
-Thermistor Therm_Board(34, Thermistor::Type::B4300, TOPIC_TEMP_WATER, &client);
-Heater heater(33, TOPIC_STATUS_HEATER, &client);
+Thermistor Therm_Boiler(35, Thermistor::Type::B3988, TOPIC_WATER_TEMP, &client);
+Thermistor Therm_Board(34, Thermistor::Type::B4300, TOPIC_WATER_TEMP, &client);
+Heater heater(33, TOPIC_HEATER_STATUS, &client);
 
 void mqtt_callback(char* topic, byte* payload, unsigned int length);
 void attempt_reconnect();
@@ -42,7 +44,7 @@ void setup()
     .onStart([]() {
       if (client.connected())
       {
-        client.publish(TOPIC_STATUS_BOARD, PAYLOAD_BOARD_OTA, true);
+        client.publish(TOPIC_BOARD_STATUS, PAYLOAD_BOARD_OTA, true);
       }
       String type;
       if (ArduinoOTA.getCommand() == U_FLASH)
@@ -99,7 +101,7 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length)
   for (int i = 0; i < length; i++) {
     strPayload += (char)payload[i];
   }
-  if(strTopic == TOPIC_CONTROL_HEATER)
+  if(strTopic == TOPIC_HEATER_CONTROL)
   {
     if(strPayload == PAYLOAD_HEATER_ON)
     {
@@ -116,10 +118,13 @@ void attempt_reconnect()
 {
   if (!client.connected())
   {
-    if (client.connect(MQTT_CLIENT_ID, SECRET_MQTT_USER, SECRET_MQTT_PASSWORD, TOPIC_STATUS_BOARD, 0, true, PAYLOAD_BOARD_NA))
+    if (client.connect(MQTT_CLIENT_ID, SECRET_MQTT_USER, SECRET_MQTT_PASSWORD, TOPIC_BOARD_STATUS, 0, true, PAYLOAD_BOARD_NA))
     {
-      client.publish(TOPIC_STATUS_BOARD, PAYLOAD_BOARD_AVAIL, true);
-      client.subscribe(TOPIC_CONTROL_HEATER);
+      client.publish(TOPIC_BOARD_STATUS, PAYLOAD_BOARD_AVAIL, true);
+      client.publish(TOPIC_BOARD_BUILDVER, _BuildInfo.src_version, true);
+      String buildtime = String(_BuildInfo.date) + "T" + String(_BuildInfo.time);
+      client.publish(TOPIC_BOARD_BUILDTIME, buildtime.c_str(), true);
+      client.subscribe(TOPIC_HEATER_CONTROL);
     }
     else
     {
