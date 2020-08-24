@@ -3,3 +3,4 @@ build/
 .vscode/
 secrets*
 !secrets*.template
+config.h
