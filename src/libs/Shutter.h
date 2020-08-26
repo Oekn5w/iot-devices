@@ -49,7 +49,7 @@ class Shutter
 
     stState getState() const;
     float getClosedPercantage() const;
-    bool getConfidence() const();
+    bool getConfidence() const;
 
   private:
     stPins Pins;
