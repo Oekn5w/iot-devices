@@ -22,7 +22,7 @@ WiFiClient espclient;
 PubSubClient client(espclient);
 
 Thermistor Therm_Boiler(35, Thermistor::Type::B3988, TOPIC_WATER_TEMP, &client);
-Thermistor Therm_Board(34, Thermistor::Type::B4300, TOPIC_WATER_TEMP, &client);
+Thermistor Therm_Board(34, Thermistor::Type::B4300, TOPIC_BOARD_TEMP, &client);
 Heater heater(33, TOPIC_HEATER_STATUS, &client);
 
 void mqtt_callback(char* topic, byte* payload, unsigned int length);
