@@ -31,7 +31,22 @@ if [[ $# -ne 0 ]]; then
 fi
 
 make SHUTTER_ID=1 $@
+RES=$?
+if [[ "$RES" != "0" ]]; then
+  echo "make with ID 1 failed, aborting!"
+  exit $RES
+fi
 
 make SHUTTER_ID=2 $@
+RES=$?
+if [[ "$RES" != "0" ]]; then
+  echo "make with ID 2 failed, aborting!"
+  exit $RES
+fi
 
 make SHUTTER_ID=3 $@
+RES=$?
+if [[ "$RES" != "0" ]]; then
+  echo "make with ID 3 failed, aborting!"
+  exit $RES
+fi
