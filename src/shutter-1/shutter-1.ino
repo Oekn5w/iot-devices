@@ -26,8 +26,11 @@ Thermistor Therm_Relais(Thermistor::Type::B4300, TOPIC_TEMP_RELAIS, &client);
 Shutter Only_Shutter(SHUTTER_PINS, SHUTTER_TIMINGS, BASE_TOPIC_SHUTTER, 0, &client, &EEPROM);
 
 void mqtt_callback(char* topic, byte* payload, unsigned int length);
-void attempt_reconnect();
+void check_connectivity();
 void IRAM_ATTR handleInterrupt();
+
+unsigned long connectivity_timevar;
+byte n_attempts;
 
 void setup()
 {
@@ -37,14 +40,29 @@ void setup()
   WiFi.hostname(MQTT_CLIENT_ID);
   WiFi.begin(SECRET_WIFI_SSID, SECRET_WIFI_PASSWORD);
 
-  while (WiFi.status() != WL_CONNECTED) {
+  n_attempts = 0;
+  while (WiFi.status() != WL_CONNECTED && n_attempts++ < 20)
+  {
     delay(500);
     Serial.print(".");
   }
+  Serial.println();
+  if(n_attempts >= 20)
+  {
+    Serial.print("WiFi unable to connect. Status is: ");
+    Serial.println(WiFi.status());
+    Serial.println("Rebooting ESP device!");
+    ESP.restart();
+  }
+  Serial.println("Connected to WiFi!");
 
   ArduinoOTA.setPassword(SECRET_OTA_PWD);
 
   ArduinoOTA.onStart([]() {
+    if (client.connected())
+    {
+      client.publish(TOPIC_BOARD_STATUS, PAYLOAD_BOARD_OTA, true);
+    }
     String type;
     if (ArduinoOTA.getCommand() == U_FLASH) {
       type = "sketch";
@@ -78,23 +96,31 @@ void setup()
 
   ArduinoOTA.begin();
 
+  Serial.println("OTA service set up");
+
   client.setServer(SECRET_MQTT_HOST, 1883);
 
   Therm_Relais.setup();
   Only_Shutter.setup(handleInterrupt);
 
   client.setCallback(mqtt_callback);
+
+  n_attempts = 0;
+  connectivity_timevar = 0;
+
+  Serial.println("Setup done!");
 }
 
 void loop()
 {
+  check_connectivity();
+
   ArduinoOTA.handle();
-  if (!client.connected()) {
-    attempt_reconnect();
-  }
   client.loop();
+
   Therm_Relais.loop();
   Only_Shutter.loop();
+
   delay(50);
 }
 
@@ -111,26 +137,62 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length)
   }
 }
 
-void attempt_reconnect()
+void check_connectivity()
 {
-  if (!client.connected())
+  if (WiFi.status() != WL_CONNECTED)
   {
-    if (client.connect(MQTT_CLIENT_ID, SECRET_MQTT_USER, SECRET_MQTT_PASSWORD, TOPIC_STATUS_BOARD, 0, true, PAYLOAD_BOARD_NA))
+    if(!connectivity_timevar || millis() > connectivity_timevar)
     {
-      client.publish(TOPIC_BOARD_STATUS, PAYLOAD_BOARD_AVAIL, true);
-      client.publish(TOPIC_BOARD_BUILDVER, _BuildInfo.src_version, true);
-      String buildtime = String(_BuildInfo.date) + "T" + String(_BuildInfo.time);
-      client.publish(TOPIC_BOARD_BUILDTIME, buildtime.c_str(), true);
+      n_attempts++;
+      if(n_attempts > 10)
+      {
+        Serial.println("WiFi unable to reconnect. Rebooting ESP device!");
+        ESP.restart();
+      }
+      Serial.println("WiFi disconnected. Trying to reconnect ...");
+      WiFi.disconnect();
+      WiFi.mode(WIFI_OFF);
+      WiFi.mode(WIFI_STA);
+      WiFi.begin(SECRET_WIFI_SSID, SECRET_WIFI_PASSWORD);
+      connectivity_timevar = millis() + 3000;
+      if (WiFi.status() != WL_CONNECTED) // don't return when connected to check on MQTT
+      {
+        return;
+      }
     }
     else
     {
-      Serial.print("failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" try again in 3 seconds");
-      // Wait 3 seconds before retrying in next loop
-      delay(3000);
+      return;
     }
   }
+  if(n_attempts && connectivity_timevar)
+  {
+    Serial.println("WiFi reconnected!");
+  }
+  if (!client.connected())
+  {
+    if(!connectivity_timevar || connectivity_timevar > millis())
+    {
+      if (client.connect(MQTT_CLIENT_ID, SECRET_MQTT_USER, SECRET_MQTT_PASSWORD, TOPIC_BOARD_STATUS, 0, true, PAYLOAD_BOARD_NA))
+      {
+        client.publish(TOPIC_BOARD_STATUS, PAYLOAD_BOARD_AVAIL, true);
+        client.publish(TOPIC_BOARD_BUILDVER, _BuildInfo.src_version, true);
+        String buildtime = String(_BuildInfo.date) + "T" + String(_BuildInfo.time);
+        client.publish(TOPIC_BOARD_BUILDTIME, buildtime.c_str(), true);
+        Serial.println("MQTT connected!");
+      }
+      else
+      {
+        Serial.print("MQTT connection failed, rc=");
+        Serial.print(client.state());
+        Serial.println(", trying again in 1 second");
+        connectivity_timevar = millis() + 1000;
+        return;
+      }
+    }
+  }
+  n_attempts = 0;
+  connectivity_timevar = 0;
 }
 
 void IRAM_ATTR handleInterrupt()
