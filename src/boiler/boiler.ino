@@ -45,10 +45,15 @@ void setup()
     delay(500);
     Serial.print(".");
   }
+  Serial.println();
   if(n_attempts >= 20)
   {
+    Serial.print("WiFi unable to connect. Status is: ");
+    Serial.println(WiFi.status());
+    Serial.println("Rebooting ESP device!");
     ESP.restart();
   }
+  Serial.println("Connected to WiFi!");
 
   ArduinoOTA.setPassword(SECRET_OTA_PWD);
 
@@ -84,6 +89,8 @@ void setup()
 
   ArduinoOTA.begin();
 
+  Serial.println("OTA service set up");
+
   client.setServer(SECRET_MQTT_HOST, 1883);
 
   Therm_Board.setup();
@@ -94,6 +101,8 @@ void setup()
 
   n_attempts = 0;
   connectivity_timevar = 0;
+
+  Serial.println("Setup done!");
 }
 
 void loop()
@@ -139,8 +148,10 @@ void check_connectivity()
       n_attempts++;
       if(n_attempts > 10)
       {
+        Serial.println("WiFi unable to reconnect. Rebooting ESP device!");
         ESP.restart();
       }
+      Serial.println("WiFi disconnected. Trying to reconnect ...");
       WiFi.disconnect();
       WiFi.mode(WIFI_OFF);
       WiFi.mode(WIFI_STA);
@@ -156,6 +167,10 @@ void check_connectivity()
       return;
     }
   }
+  if(n_attempts && connectivity_timevar)
+  {
+    Serial.println("WiFi reconnected!");
+  }
   if (!client.connected())
   {
     if(!connectivity_timevar || connectivity_timevar > millis())
@@ -167,6 +182,7 @@ void check_connectivity()
         String buildtime = String(_BuildInfo.date) + "T" + String(_BuildInfo.time);
         client.publish(TOPIC_BOARD_BUILDTIME, buildtime.c_str(), true);
         client.subscribe(TOPIC_HEATER_CONTROL);
+        Serial.println("MQTT connected!");
       }
       else
       {
