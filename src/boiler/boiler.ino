@@ -26,7 +26,10 @@ Thermistor Therm_Board(34, Thermistor::Type::B4300, TOPIC_BOARD_TEMP, &client);
 Heater heater(33, TOPIC_HEATER_STATUS, &client);
 
 void mqtt_callback(char* topic, byte* payload, unsigned int length);
-void attempt_reconnect();
+void check_connectivity();
+
+unsigned long connectivity_timevar;
+byte n_attempts;
 
 void setup()
 {
@@ -36,9 +39,15 @@ void setup()
   WiFi.begin(SECRET_WIFI_SSID, SECRET_WIFI_PASSWORD);
   WiFi.setHostname(MQTT_CLIENT_ID);
 
-  while (WiFi.status() != WL_CONNECTED) {
+  n_attempts = 0;
+  while (WiFi.status() != WL_CONNECTED && n_attempts++ < 20)
+  {
     delay(500);
     Serial.print(".");
+  }
+  if(n_attempts >= 20)
+  {
+    ESP.restart();
   }
 
   ArduinoOTA.setPassword(SECRET_OTA_PWD);
@@ -82,18 +91,22 @@ void setup()
   heater.setup();
 
   client.setCallback(mqtt_callback);
+
+  n_attempts = 0;
+  connectivity_timevar = 0;
 }
 
 void loop()
 {
+  check_connectivity();
+
   ArduinoOTA.handle();
-  if (!client.connected()) {
-    attempt_reconnect();
-  }
   client.loop();
+
   Therm_Board.loop();
   Therm_Boiler.loop();
   heater.loop();
+
   delay(50);
 }
 
@@ -117,25 +130,54 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length)
   }
 }
 
-void attempt_reconnect()
+void check_connectivity()
 {
-  if (!client.connected())
+  if (WiFi.status() != WL_CONNECTED)
   {
-    if (client.connect(MQTT_CLIENT_ID, SECRET_MQTT_USER, SECRET_MQTT_PASSWORD, TOPIC_BOARD_STATUS, 0, true, PAYLOAD_BOARD_NA))
+    if(!connectivity_timevar || millis() > connectivity_timevar)
     {
-      client.publish(TOPIC_BOARD_STATUS, PAYLOAD_BOARD_AVAIL, true);
-      client.publish(TOPIC_BOARD_BUILDVER, _BuildInfo.src_version, true);
-      String buildtime = String(_BuildInfo.date) + "T" + String(_BuildInfo.time);
-      client.publish(TOPIC_BOARD_BUILDTIME, buildtime.c_str(), true);
-      client.subscribe(TOPIC_HEATER_CONTROL);
+      n_attempts++;
+      if(n_attempts > 10)
+      {
+        ESP.restart();
+      }
+      WiFi.disconnect();
+      WiFi.mode(WIFI_OFF);
+      WiFi.mode(WIFI_STA);
+      WiFi.begin(SECRET_WIFI_SSID, SECRET_WIFI_PASSWORD);
+      connectivity_timevar = millis() + 3000;
+      if (WiFi.status() != WL_CONNECTED) // don't return when connected to check on MQTT
+      {
+        return;
+      }
     }
     else
     {
-      Serial.print("failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" try again in 3 seconds");
-      // Wait 3 seconds before retrying in next loop
-      delay(3000);
+      return;
     }
   }
+  if (!client.connected())
+  {
+    if(!connectivity_timevar || connectivity_timevar > millis())
+    {
+      if (client.connect(MQTT_CLIENT_ID, SECRET_MQTT_USER, SECRET_MQTT_PASSWORD, TOPIC_BOARD_STATUS, 0, true, PAYLOAD_BOARD_NA))
+      {
+        client.publish(TOPIC_BOARD_STATUS, PAYLOAD_BOARD_AVAIL, true);
+        client.publish(TOPIC_BOARD_BUILDVER, _BuildInfo.src_version, true);
+        String buildtime = String(_BuildInfo.date) + "T" + String(_BuildInfo.time);
+        client.publish(TOPIC_BOARD_BUILDTIME, buildtime.c_str(), true);
+        client.subscribe(TOPIC_HEATER_CONTROL);
+      }
+      else
+      {
+        Serial.print("MQTT connection failed, rc=");
+        Serial.print(client.state());
+        Serial.println(", trying again in 1 second");
+        connectivity_timevar = millis() + 1000;
+        return;
+      }
+    }
+  }
+  n_attempts = 0;
+  connectivity_timevar = 0;
 }
