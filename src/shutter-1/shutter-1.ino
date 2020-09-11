@@ -10,6 +10,7 @@
 #include "config.h"
 
 #include "ESP8266WiFi.h"
+#include "EEPROM.h"
 #include "PubSubClient.h"
 #include "Thermistor.h"
 #include "Shutter.h"
@@ -22,7 +23,7 @@
 WiFiClient espclient;
 PubSubClient client(espclient);
 
-Thermistor Therm_Relais(Thermistor::Type::B4300, TOPIC_TEMP_RELAIS, &client);
+Thermistor Therm_Relais(Thermistor::Type::B4300, TOPIC_RELAIS_TEMP, &client);
 Shutter Only_Shutter(SHUTTER_PINS, SHUTTER_TIMINGS, BASE_TOPIC_SHUTTER, 0, &client, &EEPROM);
 
 void mqtt_callback(char* topic, byte* payload, unsigned int length);
