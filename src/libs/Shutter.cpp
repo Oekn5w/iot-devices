@@ -18,6 +18,14 @@ void Shutter::callback(String topic, String payload)
 
 }
 
+void Shutter::setSubscriptions()
+{
+  String tempTopic = this->topic_base + SHUTTER_TOPIC_POSITION_COMMAND;
+  mqttClient->subscribe(tempTopic.c_str());
+  tempTopic = this->topic_base + SHUTTER_TOPIC_STATE_COMMAND;
+  mqttClient->subscribe(tempTopic.c_str());
+}
+
 void Shutter::interrupt()
 {
 

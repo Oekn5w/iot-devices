@@ -42,6 +42,7 @@ class Shutter
       unsigned int eep_addr, PubSubClient* client, EEPROMClass* eep);
 
     void callback(String topic, String payload);
+    void setSubscriptions();
     void interrupt();
 
     void setup(void (* fcn_interrupt)());
