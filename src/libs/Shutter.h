@@ -18,10 +18,18 @@ class Shutter
       stPinGroup actuator;
     };
 
-    enum stState {
+    enum stMovementState {
       STOPPED,
       OPENING,
       CLOSING
+    };
+
+    enum stState {
+      OPEN,
+      PARTIALLY_OPEN,
+      PARTIALLY_CLOSED,
+      CLOSED,
+      FULLY_CLOSED
     };
 
     struct stTimings {
@@ -48,8 +56,9 @@ class Shutter
     void setup(void (* fcn_interrupt)());
     void loop();
 
+    stMovementState getMovementState() const;
     stState getState() const;
-    float getClosedPercantage() const;
+    float getClosedPercentage() const;
     bool getConfidence() const;
 
   private:
@@ -64,12 +73,16 @@ class Shutter
     bool save_up;
     bool save_down;
 
+    stMovementState movement_state;
+
+    float queued_target_value;
+
     // 0 -> open, 100 -> touching sill, 200 -> closed gaps
     float percentage_closed;
 
     bool is_confident;
 
-    stState state;
+    
 
 };
 

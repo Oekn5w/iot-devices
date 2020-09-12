@@ -39,7 +39,8 @@ void Shutter::setup(void (* fcn_interrupt)())
     this->percentage_closed = NAN;
   }
   this->is_confident = false;
-  this->state = stState::STOPPED;
+  this->queued_target_value = -1.0f;
+  this->movement_state = stMovementState::STOPPED;
   digitalWrite(Pins.actuator.down, 0);
   digitalWrite(Pins.actuator.up, 0);
   delay(1);
