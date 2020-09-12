@@ -18,7 +18,7 @@ char msg[MSG_BUFFER_SIZE];
 #define ADC_a_lin (1.012089774549827f)
 #define ADC_b_lin (177.9558625375548f)
 #else
-#define ADC_RES (1024.0)
+#define ADC_RES (1024.0f)
 #endif
 
 #define REPORT_INTERVAL 20000
@@ -67,7 +67,7 @@ void Thermistor::loop()
       this->next_query = uptime + REPORT_INTERVAL;
     }
     float temperature = this->getTemp();
-    snprintf (msg, MSG_BUFFER_SIZE, "%.1f", temperature);
+    snprintf(msg, MSG_BUFFER_SIZE, "%.1f", temperature);
     mqttClient->publish(topic.c_str(), msg);
   }
 }
@@ -77,7 +77,7 @@ float Thermistor::getTemp()
   float Rth = this->getResistance();
   float temp = log(Rth);
   float temp2 = pvalues[0] + pvalues[1] * temp + pvalues[2] * temp * temp * temp;
-  return (1.0 / temp2 - T0);
+  return (1.0f / temp2 - T0);
 }
 
 float Thermistor::getResistance()
