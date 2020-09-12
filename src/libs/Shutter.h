@@ -50,6 +50,7 @@ class Shutter
       unsigned int eep_addr, PubSubClient* client, EEPROMClass* eep);
 
     void callback(String topic, String payload);
+    void mqttReconnect();
     void setSubscriptions();
     void interrupt();
 
@@ -79,10 +80,13 @@ class Shutter
 
     // 0 -> open, 100 -> touching sill, 200 -> closed gaps
     float percentage_closed;
+    float percentage_closed_published;
 
     bool is_confident;
 
-    
+    void publishAll();
+    void publishState(bool checkConnectivity = true) const;
+    void publishValue(bool checkConnectivity = true);
 
 };
 
