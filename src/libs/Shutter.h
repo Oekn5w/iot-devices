@@ -19,17 +19,17 @@ class Shutter
     };
 
     enum stMovementState {
-      STOPPED,
-      OPENING,
-      CLOSING
+      mvOPENING,
+      mvCLOSING,
+      mvSTOPPED
     };
 
     enum stState {
-      OPEN,
-      PARTIALLY_OPEN,
-      PARTIALLY_CLOSED,
+      OPENING,
+      CLOSING,
+      UNDEFINED,
       CLOSED,
-      FULLY_CLOSED
+      OPEN
     };
 
     struct stTimings {
@@ -57,7 +57,6 @@ class Shutter
     void setup(void (* fcn_interrupt)());
     void loop();
 
-    stMovementState getMovementState() const;
     stState getState() const;
     float getClosedPercentage() const;
     bool getConfidence() const;
@@ -82,10 +81,12 @@ class Shutter
     float percentage_closed;
     float percentage_closed_published;
 
+    stState state_published;
+
     bool is_confident;
 
     void publishAll();
-    void publishState(bool checkConnectivity = true) const;
+    void publishState(bool checkConnectivity = true);
     void publishValue(bool checkConnectivity = true);
 
 };
