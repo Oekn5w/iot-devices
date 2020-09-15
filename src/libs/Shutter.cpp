@@ -86,12 +86,28 @@ void Shutter::actuation()
 
 void Shutter::setTarget(float targetValue)
 {
-
+  targetValue = clampPercentage(targetValue);
+  if (!this->is_confident)
+  {
+    if (equalWithEps(targetValue))
+    {
+      this->queued_target_value = -1.0f;
+    }
+    else
+    {
+      this->queued_target_value = targetValue;
+    }
+    this->calibrate();
+  }
+  else
+  {
+    this->actuation(targetValue);
+  }
 }
 
 void Shutter::calibrate()
 {
-
+  this->actuation(stMovementState::mvOPENING, this->Timings.up + this->Timings.full_opening + 500);
 }
 
 Shutter::stState Shutter::getState() const
