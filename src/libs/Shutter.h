@@ -85,6 +85,9 @@ class Shutter
 
     bool is_confident;
 
+    void setTarget(float targetValue);
+    void calibrate();
+
     void publishAll();
     void publishState(bool checkConnectivity = true);
     void publishValue(bool checkConnectivity = true);

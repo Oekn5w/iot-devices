@@ -50,8 +50,8 @@ void Shutter::setup(void (* fcn_interrupt)())
   this->movement_state = stMovementState::mvSTOPPED;
   this->percentage_closed_published = -1.0f;
   this->state_published = UNDEFINED;
-  digitalWrite(Pins.actuator.down, 0);
-  digitalWrite(Pins.actuator.up, 0);
+  digitalWrite(Pins.actuator.down, RELAIS_LOW);
+  digitalWrite(Pins.actuator.up, RELAIS_LOW);
   delay(1);
   pinMode(Pins.actuator.down, OUTPUT);
   pinMode(Pins.actuator.up, OUTPUT);
@@ -156,7 +156,7 @@ void Shutter::publishValue(bool checkConnectivity)
 {
   if (!checkConnectivity || this->mqttClient->connected())
   {
-    if (this->percentage_closed_published < 0.0f || std::abs(this->percentage_closed - this->percentage_closed_published) > 0.1f)
+    if (this->percentage_closed_published < 0.0f || abs(this->percentage_closed - this->percentage_closed_published) > 0.1f)
     {
       char payload[10];
 

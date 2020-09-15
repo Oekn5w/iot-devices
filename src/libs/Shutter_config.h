@@ -1,6 +1,9 @@
 // Time [ms] up to which the shutter travels to the next major stop (full open - on sill - full closed)
 #define SHUTTER_TIMEOUT_BUTTON (700)
 
+#define RELAIS_LOW (0)
+#define RELAIS_HIGH (1)
+
 #define SHUTTER_TOPIC_STATE_PUBLISH "/state/current"
 
 #define SHUTTER_PAYLOAD_STATE_OPEN "open"
