@@ -69,6 +69,21 @@ void Shutter::loop()
 
 }
 
+void Shutter::actuation(float targetValue)
+{
+
+}
+
+void Shutter::actuation(stMovementState toMove, unsigned int duration)
+{
+
+}
+
+void Shutter::actuation()
+{
+
+}
+
 void Shutter::setTarget(float targetValue)
 {
 
@@ -171,4 +186,16 @@ void Shutter::publishValue(bool checkConnectivity)
       this->percentage_closed_published = this->percentage_closed;
     }
   }
+}
+
+bool Shutter::equalWithEps(float value)
+{
+  return (abs(value) < 0.1f);
+}
+
+float Shutter::clampPercentage(float value)
+{
+  value = min(value, 200.0f);
+  value = max(value, 0.0f);
+  return value;
 }

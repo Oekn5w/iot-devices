@@ -85,6 +85,10 @@ class Shutter
 
     bool is_confident;
 
+    void actuation(float targetValue);
+    void actuation(stMovementState toMove, unsigned int duration);
+    void actuation();
+
     void setTarget(float targetValue);
     void calibrate();
 
@@ -92,6 +96,8 @@ class Shutter
     void publishState(bool checkConnectivity = true);
     void publishValue(bool checkConnectivity = true);
 
+    static bool equalWithEps(float value);
+    static float clampPercentage(float value);
 };
 
 #endif
