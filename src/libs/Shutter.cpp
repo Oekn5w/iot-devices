@@ -71,7 +71,28 @@ void Shutter::loop()
 
 void Shutter::actuation(float targetValue)
 {
-
+  targetValue = clampPercentage(targetValue);
+  if (equalWithEps(this->percentage_closed - targetValue))
+  {
+    return;
+  }
+  unsigned int t0, t1, duration, extra = 0;
+  stMovementState nextMove;
+  if (this->percentage_closed > targetValue)
+  {
+    // OPEN
+    nextMove = mvOPENING;
+    if (equalWithEps(targetValue)) { extra = SHUTTER_CALIB_OVERSHOOT; }
+  }
+  else
+  {
+    // CLOSE
+    nextMove = mvCLOSING;
+  }
+  t0 = this->getRelativeTime(this->percentage_closed, nextMove);
+  t1 = this->getRelativeTime(targetValue, nextMove);
+  duration = t1 - t0 + extra;
+  this->actuation(nextMove, duration);
 }
 
 void Shutter::actuation(stMovementState toMove, unsigned int duration)
@@ -81,7 +102,183 @@ void Shutter::actuation(stMovementState toMove, unsigned int duration)
 
 void Shutter::actuation()
 {
+  unsigned int time = millis();
+  if (this->actuation_time && time >= this->actuation_time)
+  {
+    if (this->movement_state != mvSTOPPED)
+    {
+      this->movement_state = mvSTOPPED;
+      this->updateOutput();
+      this->percentage_closed = this->getIntermediatePercentage(time);
+      this->publishAll();
+      if (this->queued_target_value == -1.0f)
+      {
+        // 500ms delay before queued value is executed
+        this->actuation_time = time + 500;
+      }
+      else
+      {
+        this->actuation_time = 0;
+      }
+    }
+    else if (this->queued_target_value != -1.0f)
+    {
+      this->actuation(this->queued_target_value);
+      this->queued_target_value = -1.0f;
+    }
+    else
+    {
+      this->actuation_time = 0;
+    }
+  }
+}
 
+void Shutter::calibrate()
+{
+  this->actuation(stMovementState::mvOPENING, this->Timings.opening + this->Timings.full_opening + SHUTTER_CALIB_OVERSHOOT);
+}
+
+void Shutter::updateOutput()
+{
+  switch(this->movement_state)
+  {
+    case mvSTOPPED:
+      digitalWrite(Pins.actuator.down, RELAIS_LOW);
+      digitalWrite(Pins.actuator.up, RELAIS_LOW);
+      break;
+    case mvCLOSING:
+      digitalWrite(Pins.actuator.up, RELAIS_LOW);
+      digitalWrite(Pins.actuator.down, RELAIS_HIGH);
+      break;
+    case mvOPENING:
+      digitalWrite(Pins.actuator.down, RELAIS_LOW);
+      digitalWrite(Pins.actuator.up, RELAIS_HIGH);
+      break;
+  }
+}
+
+float Shutter::getIntermediatePercentage(unsigned int time)
+{
+  if (time > this->calcBase.endTime) { time = this->calcBase.endTime; }
+  if (!this->calcBase.t0)
+  {
+    switch (this->calcBase.state)
+    {
+      case mvOPENING:
+        if (!this->calcBase.t0)
+        {
+          this->calcBase.t0 = this->calcBase.startTime - this->getRelativeTime(this->calcBase.startPercentage, mvOPENING);
+        }
+        return this->getPercentage(time - this->calcBase.t0, mvOPENING);
+        break;
+      case mvCLOSING:
+        if (!this->calcBase.t0)
+        {
+          this->calcBase.t0 = this->calcBase.startTime - this->getRelativeTime(this->calcBase.startPercentage, mvCLOSING);
+        }
+        break;
+      default:
+        return this->calcBase.startPercentage;
+    }
+  }
+  return this->getPercentage(time - this->calcBase.t0, this->calcBase.state);
+}
+
+float Shutter::getPercentage(unsigned int trel, stMovementState movement, float fallback) const
+{
+  switch (movement)
+  {
+    case mvOPENING:
+      if (trel == 0)
+      {
+        return 200.0f;
+      }
+      if (trel < this->Timings.full_opening)
+      {
+        return 200.0f - ((trel * 100.0f) / this->Timings.full_opening);
+      }
+      if (trel == this->Timings.full_opening)
+      {
+        return 100.0f;
+      }
+      trel -= this->Timings.full_opening;
+      if (trel < this->Timings.opening)
+      {
+        return 100.0f - ((trel * 100.0f) / this->Timings.opening);
+      }
+      return 0.0f;
+      break;
+    case mvCLOSING:
+      if (trel == 0)
+      {
+        return 0.0f;
+      }
+      if (trel < this->Timings.closing)
+      {
+        return ((trel * 100.0f) / this->Timings.closing);
+      }
+      if (trel == this->Timings.closing)
+      {
+        return 100.0f;
+      }
+      trel -= this->Timings.closing;
+      if (trel < this->Timings.full_closing)
+      {
+        return 100.0f + ((trel * 100.0f) / this->Timings.full_closing);
+      }
+      return 200.0f;
+      break;
+    default:
+      return fallback;
+  }
+}
+
+unsigned int Shutter::getRelativeTime(float percentage, stMovementState movement) const
+{
+  percentage = clampPercentage(percentage);
+  switch (movement)
+  {
+    case mvOPENING:
+      if (equalWithEps(percentage - 0.0f))
+      {
+        return this->Timings.full_opening + this->Timings.opening;
+      }
+      if (equalWithEps(percentage - 100.0f))
+      {
+        return this->Timings.full_opening;
+      }
+      if (percentage < 100.0f)
+      {
+        return (unsigned int)(this->Timings.full_opening + ((this->Timings.opening * (100.0f - percentage)) / 100.0f));
+      }
+      if (equalWithEps(percentage - 200.0f))
+      {
+        return 0;
+      }
+      return (unsigned int)((this->Timings.full_opening * (200.0f - percentage)) / 100.0f);
+      break;
+    case mvCLOSING:
+      if (equalWithEps(percentage - 0.0f))
+      {
+        return 0;
+      }
+      if (equalWithEps(percentage - 100.0f))
+      {
+        return this->Timings.closing;
+      }
+      if (percentage < 100.0f)
+      {
+        return (unsigned int)((this->Timings.closing * percentage) / 100.0f);
+      }
+      if (equalWithEps(percentage - 200.0f))
+      {
+        return this->Timings.closing + this->Timings.full_closing;
+      }
+      return (unsigned int)(this->Timings.closing + (this->Timings.full_closing * (percentage - 100.0f) / 100.0f));
+      break;
+    default:
+      return 0;
+  }
 }
 
 void Shutter::setTarget(float targetValue)
@@ -103,11 +300,6 @@ void Shutter::setTarget(float targetValue)
   {
     this->actuation(targetValue);
   }
-}
-
-void Shutter::calibrate()
-{
-  this->actuation(stMovementState::mvOPENING, this->Timings.up + this->Timings.full_opening + 500);
 }
 
 Shutter::stState Shutter::getState() const

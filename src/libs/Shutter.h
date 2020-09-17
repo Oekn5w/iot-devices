@@ -32,15 +32,24 @@ class Shutter
       OPEN
     };
 
+    struct stCalcBase {
+      stMovementState state;
+      unsigned int startTime;
+      unsigned int endTime;
+      float startPercentage;
+      float targetPercentage;
+      unsigned int t0;
+    };
+
     struct stTimings {
       // fully open to touching the sill
-      unsigned int down;
+      unsigned int closing;
 
       // touching the sill to motor shutoff (closing the gaps)
       unsigned int full_closing;
 
       // barely touching to fully open
-      unsigned int up;
+      unsigned int opening;
 
       // downwards motor shutoff to barely touching the sill
       unsigned int full_opening;
@@ -75,7 +84,10 @@ class Shutter
 
     stMovementState movement_state;
 
+    stCalcBase calcBase;
+
     float queued_target_value;
+    float actuation_time;
 
     // 0 -> open, 100 -> touching sill, 200 -> closed gaps
     float percentage_closed;
@@ -88,6 +100,7 @@ class Shutter
     void actuation(float targetValue);
     void actuation(stMovementState toMove, unsigned int duration);
     void actuation();
+    void updateOutput();
 
     void setTarget(float targetValue);
     void calibrate();
@@ -95,6 +108,10 @@ class Shutter
     void publishAll();
     void publishState(bool checkConnectivity = true);
     void publishValue(bool checkConnectivity = true);
+
+    float getIntermediatePercentage(unsigned int time);
+    float getPercentage(unsigned int trel, stMovementState movement, float fallback = 0.0f) const;
+    unsigned int getRelativeTime(float percentage, stMovementState movement) const;
 
     static bool equalWithEps(float value);
     static float clampPercentage(float value);
