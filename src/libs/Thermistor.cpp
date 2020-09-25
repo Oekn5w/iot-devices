@@ -21,7 +21,7 @@ char msg[MSG_BUFFER_SIZE];
 #define ADC_RES (1024.0f)
 #endif
 
-#define REPORT_INTERVAL 20000
+#define QUERY_INTERVAL 60000
 
 #if ESP32 == 1
 Thermistor::Thermistor(byte channel, Type type, String topic, PubSubClient * mqttClient)
@@ -36,6 +36,7 @@ Thermistor::Thermistor(Type type, String topic, PubSubClient * mqttClient)
 #endif
   this->topic = topic;
   this->mqttClient = mqttClient;
+  this->publishedTemperature = -500.0f;
   switch (type) {
     case Type::B3988:
       this->pvalues = values_B3988;
@@ -59,16 +60,20 @@ void Thermistor::setup()
 void Thermistor::loop()
 {
   unsigned long uptime = millis();
-  if (uptime > this->next_query)
+  if (uptime > this->next_query && mqttClient->connected())
   {
-    this->next_query += REPORT_INTERVAL;
-    if (uptime > this->next_query)
+    this->next_query += QUERY_INTERVAL;
+    if (uptime > this->next_query - (QUERY_INTERVAL / 2))
     {
-      this->next_query = uptime + REPORT_INTERVAL;
+      this->next_query = uptime + QUERY_INTERVAL;
     }
     float temperature = this->getTemp();
-    snprintf(msg, MSG_BUFFER_SIZE, "%.1f", temperature);
-    mqttClient->publish(topic.c_str(), msg);
+    if (abs(temperature - this->publishedTemperature) > 0.1f)
+    {
+      snprintf(msg, MSG_BUFFER_SIZE, "%.1f", temperature);
+      mqttClient->publish(topic.c_str(), msg, true);
+      this->publishedTemperature = temperature;
+    }
   }
 }
 

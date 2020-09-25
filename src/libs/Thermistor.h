@@ -26,6 +26,8 @@ class Thermistor
     unsigned long next_query;
     PubSubClient* mqttClient;
 
+    float publishedTemperature;
+
     float getTemp();
     float getResistance();
     float getADC();
