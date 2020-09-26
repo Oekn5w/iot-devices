@@ -9,9 +9,6 @@
 #include "Thermistor.h"
 #include "Heater.h"
 
-// not needed, but make also parses Shutter.h, so see below
-#include "EEPROM.h"
-
 // not including the two headers here makes it failing to find them,
 // might be solved with #110 on makeEspArduino
 #include "Update.h"
