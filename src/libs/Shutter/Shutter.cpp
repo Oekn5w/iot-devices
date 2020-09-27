@@ -330,7 +330,7 @@ Shutter::stState Shutter::getState() const
   return stState::UNDEFINED;
 }
 
-void Shutter::publishAll()
+void Shutter::publishAll(bool forcePublish)
 {
   if (this->mqttClient->connected())
   {
@@ -339,12 +339,12 @@ void Shutter::publishAll()
   }
 }
 
-void Shutter::publishState(bool checkConnectivity)
+void Shutter::publishState(bool checkConnectivity, bool forcePublish)
 {
   if (!checkConnectivity || this->mqttClient->connected())
   {
     stState tempState = this->getState();
-    if (tempState != this->state_published)
+    if (forcePublish || tempState != this->state_published)
     {
       String payload = "";
       bool retain = true;
@@ -372,24 +372,47 @@ void Shutter::publishState(bool checkConnectivity)
       this->mqttClient->publish(topic.c_str(), payload.c_str(), retain);
       this->state_published = tempState;
     }
+    if (forcePublish || this->movement_state != this->movement_state_published)
+    {
+      String payload = "";
+      bool retain = true;
+      switch (this->movement_state)
+      {
+        case mvSTOPPED:
+          payload = SHUTTER_PAYLOAD_STATE_STOPPED;
+          break;
+        case mvCLOSING:
+          payload = SHUTTER_PAYLOAD_STATE_CLOSING;
+          retain = false;
+          break;
+        case mvOPENING:
+          payload = SHUTTER_PAYLOAD_STATE_OPENING;
+          retain = false;
+          break;
+      }
+      String topic = this->topic_base + SHUTTER_TOPIC_MVSTATE_PUBLISH;
+      this->mqttClient->publish(topic.c_str(), payload.c_str(), retain);
+      this->movement_state_published = this->movement_state;
+    }
   }
 }
 
-void Shutter::publishValue(bool checkConnectivity)
+void Shutter::publishValue(bool checkConnectivity, bool forcePublish)
 {
   if (!checkConnectivity || this->mqttClient->connected())
   {
-    if (this->percentage_closed_published < 0.0f || abs(this->percentage_closed - this->percentage_closed_published) > 0.1f)
+    if (forcePublish || this->percentage_closed_published < 0.0f || abs(this->percentage_closed - this->percentage_closed_published) > 0.1f)
     {
       char payload[10];
+      bool retain = (this->movement_state == mvSTOPPED);
 
       String topic = this->topic_base + SHUTTER_TOPIC_POSITION_PUBLISH;
       snprintf(payload, 10, "%.0f", min(this->percentage_closed, 100.0f));
-      this->mqttClient->publish(topic.c_str(), payload);
+      this->mqttClient->publish(topic.c_str(), payload, retain);
 
       snprintf(payload, 10, "%.0f", this->percentage_closed);
       topic = this->topic_base + SHUTTER_TOPIC_POSITION_PUBLISH_DETAILED;
-      this->mqttClient->publish(topic.c_str(), payload);
+      this->mqttClient->publish(topic.c_str(), payload, retain);
 
       this->percentage_closed_published = this->percentage_closed;
     }

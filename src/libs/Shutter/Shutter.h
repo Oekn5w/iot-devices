@@ -94,6 +94,7 @@ class Shutter
     float percentage_closed_published;
 
     stState state_published;
+    stMovementState movement_state_published;
 
     bool is_confident;
 
@@ -105,9 +106,9 @@ class Shutter
     void setTarget(float targetValue);
     void calibrate();
 
-    void publishAll();
-    void publishState(bool checkConnectivity = true);
-    void publishValue(bool checkConnectivity = true);
+    void publishAll(bool forcePublish = false);
+    void publishState(bool checkConnectivity = true, bool forcePublish = false);
+    void publishValue(bool checkConnectivity = true, bool forcePublish = false);
 
     float getIntermediatePercentage(unsigned int time);
     float getPercentage(unsigned int trel, stMovementState movement, float fallback = 0.0f) const;

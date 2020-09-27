@@ -6,11 +6,13 @@
 #define RELAIS_HIGH (1)
 
 #define SHUTTER_TOPIC_STATE_PUBLISH "/state/current"
+#define SHUTTER_TOPIC_MVSTATE_PUBLISH "/state/movement"
 
 #define SHUTTER_PAYLOAD_STATE_OPEN "open"
 #define SHUTTER_PAYLOAD_STATE_OPENING "opening"
 #define SHUTTER_PAYLOAD_STATE_CLOSING "closing"
 #define SHUTTER_PAYLOAD_STATE_CLOSED "closed"
+#define SHUTTER_PAYLOAD_STATE_STOPPED "stopped"
 // 0 -> open, 100 -> touching sill, 200 -> closed gaps
 #define SHUTTER_PAYLOAD_STATE_THRESHOLD (90)
 
