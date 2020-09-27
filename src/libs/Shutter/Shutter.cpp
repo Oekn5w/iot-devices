@@ -30,7 +30,7 @@ void Shutter::mqttReconnect()
 {
   this->percentage_closed_published = -1.0f;
   this->state_published = UNDEFINED;
-  this->publishAll();
+  this->publishAll(true);
 }
 
 void Shutter::interrupt()
@@ -66,41 +66,64 @@ void Shutter::setup(void (* fcn_interrupt)())
 
 void Shutter::loop()
 {
-
+  this->actuationLoop();
 }
 
 void Shutter::actuation(float targetValue)
 {
   targetValue = clampPercentage(targetValue);
-  if (equalWithEps(this->percentage_closed - targetValue))
+  if (this->movement_state == mvSTOPPED)
   {
-    return;
-  }
-  unsigned int t0, t1, duration, extra = 0;
-  stMovementState nextMove;
-  if (this->percentage_closed > targetValue)
-  {
-    // OPEN
-    nextMove = mvOPENING;
-    if (equalWithEps(targetValue)) { extra = SHUTTER_CALIB_OVERSHOOT; }
+    if (equalWithEps(this->percentage_closed - targetValue))
+    {
+      return;
+    }
+    unsigned int t0, t1, duration, extra = 0;
+    stMovementState nextMove;
+    if (this->percentage_closed > targetValue)
+    {
+      // OPEN
+      nextMove = mvOPENING;
+      if (equalWithEps(targetValue)) { extra = SHUTTER_CALIB_OVERSHOOT; }
+    }
+    else
+    {
+      // CLOSE
+      nextMove = mvCLOSING;
+    }
+    t0 = this->getRelativeTime(this->percentage_closed, nextMove);
+    t1 = this->getRelativeTime(targetValue, nextMove);
+    duration = t1 - t0 + extra;
+    this->actuationRaw(nextMove, duration);
   }
   else
   {
-    // CLOSE
-    nextMove = mvCLOSING;
+    this->queued_target_value = targetValue;
   }
-  t0 = this->getRelativeTime(this->percentage_closed, nextMove);
-  t1 = this->getRelativeTime(targetValue, nextMove);
-  duration = t1 - t0 + extra;
-  this->actuation(nextMove, duration);
+  
 }
 
-void Shutter::actuation(stMovementState toMove, unsigned int duration)
+void Shutter::actuationRaw(stMovementState toMove, unsigned int duration)
 {
-
+  if (toMove == mvSTOPPED)
+  {
+    this->actuation_time = millis();
+    this->actuationLoop();
+  }
+  else
+  {
+    this->movement_state = toMove;
+    unsigned int time = this->updateOutput();
+    ;
+    this->calcBase.state = toMove;
+    this->calcBase.startTime = time;
+    this->calcBase.t0 = 0;
+    this->calcBase.endTime = time + duration;
+    this->calcBase.startPercentage = this->percentage_closed;
+  }  
 }
 
-void Shutter::actuation()
+void Shutter::actuationLoop()
 {
   unsigned int time = millis();
   if (this->actuation_time && time >= this->actuation_time)
@@ -108,9 +131,9 @@ void Shutter::actuation()
     if (this->movement_state != mvSTOPPED)
     {
       this->movement_state = mvSTOPPED;
-      this->updateOutput();
+      time = this->updateOutput();
       this->percentage_closed = this->getIntermediatePercentage(time);
-      this->publishAll();
+      this->publishAll(true);
       if (this->queued_target_value == -1.0f)
       {
         // 500ms delay before queued value is executed
@@ -135,10 +158,10 @@ void Shutter::actuation()
 
 void Shutter::calibrate()
 {
-  this->actuation(stMovementState::mvOPENING, this->Timings.opening + this->Timings.full_opening + SHUTTER_CALIB_OVERSHOOT);
+  this->actuationRaw(stMovementState::mvOPENING, this->Timings.opening + this->Timings.full_opening + SHUTTER_CALIB_OVERSHOOT);
 }
 
-void Shutter::updateOutput()
+unsigned int Shutter::updateOutput()
 {
   switch(this->movement_state)
   {
@@ -155,6 +178,7 @@ void Shutter::updateOutput()
       digitalWrite(Pins.actuator.up, RELAIS_HIGH);
       break;
   }
+  return millis();
 }
 
 float Shutter::getIntermediatePercentage(unsigned int time)
@@ -295,6 +319,7 @@ void Shutter::setTarget(float targetValue)
       this->queued_target_value = targetValue;
     }
     this->calibrate();
+    this->is_confident = true;
   }
   else
   {

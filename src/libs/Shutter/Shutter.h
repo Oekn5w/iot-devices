@@ -37,7 +37,6 @@ class Shutter
       unsigned int startTime;
       unsigned int endTime;
       float startPercentage;
-      float targetPercentage;
       unsigned int t0;
     };
 
@@ -99,9 +98,9 @@ class Shutter
     bool is_confident;
 
     void actuation(float targetValue);
-    void actuation(stMovementState toMove, unsigned int duration);
-    void actuation();
-    void updateOutput();
+    void actuationRaw(stMovementState toMove, unsigned int duration);
+    void actuationLoop();
+    unsigned int updateOutput();
 
     void setTarget(float targetValue);
     void calibrate();
