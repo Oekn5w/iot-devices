@@ -137,38 +137,53 @@ void Shutter::actuationRaw(stMovementState toMove, unsigned int duration)
     this->calcBase.t0 = 0;
     this->calcBase.endTime = time + duration;
     this->calcBase.startPercentage = this->percentage_closed;
+    this->publish_time = time;
+    this->publishAll(true);
   }  
 }
 
 void Shutter::actuationLoop()
 {
   unsigned int time = millis();
-  if (this->actuation_time && time >= this->actuation_time)
+  if (this->actuation_time)
   {
-    if (this->movement_state != mvSTOPPED)
+    this->percentage_closed = this->getIntermediatePercentage(time);
+    if (time >= this->actuation_time)
     {
-      this->movement_state = mvSTOPPED;
-      time = this->updateOutput();
-      this->percentage_closed = this->getIntermediatePercentage(time);
-      this->publishAll(true);
-      if (this->queued_target_value == -1.0f)
+      if (this->movement_state != mvSTOPPED)
       {
-        // 500ms delay before queued value is executed
-        this->actuation_time = time + 500;
+        this->movement_state = mvSTOPPED;
+        time = this->updateOutput();
+        this->percentage_closed = this->getIntermediatePercentage(time);
+        this->publish_time = 0;
+        this->publishAll(true);
+        if (this->queued_target_value == -1.0f)
+        {
+          // 500ms delay before queued value is executed
+          this->actuation_time = time + 500;
+        }
+        else
+        {
+          this->actuation_time = 0;
+        }
+      }
+      else if (this->queued_target_value != -1.0f)
+      {
+        this->actuation(this->queued_target_value);
+        this->queued_target_value = -1.0f;
       }
       else
       {
         this->actuation_time = 0;
       }
     }
-    else if (this->queued_target_value != -1.0f)
-    {
-      this->actuation(this->queued_target_value);
-      this->queued_target_value = -1.0f;
-    }
     else
     {
-      this->actuation_time = 0;
+      if(this->publish_time && time >= this->publish_time)
+      {
+        this->publishAll(false);
+        this->publish_time += SHUTTER_PUBLISH_INTERVAL;
+      }
     }
   }
 }
@@ -376,8 +391,8 @@ void Shutter::publishAll(bool forcePublish)
 {
   if (this->mqttClient->connected())
   {
-    this->publishState(false);
-    this->publishValue(false);
+    this->publishState(false, forcePublish);
+    this->publishValue(false, forcePublish);
   }
 }
 
