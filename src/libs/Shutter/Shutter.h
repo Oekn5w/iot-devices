@@ -56,7 +56,6 @@ class Shutter
     Shutter(stPins Pins, stTimings Timings, String topic_base, PubSubClient* client);
 
     void callback(String topic, String payload);
-    void mqttReconnect();
     void setSubscriptions();
     void interrupt();
 
@@ -74,15 +73,18 @@ class Shutter
     PubSubClient* mqttClient;
 
     // saving for interrupt handling
-    bool save_up;
-    bool save_down;
+    int save_up;
+    int save_down;
 
     stMovementState movement_state;
 
     stCalcBase calcBase;
 
     float queued_target_value;
-    float actuation_time;
+
+    unsigned int actuation_time;
+    unsigned int publish_time;
+    unsigned int confidence_subscription_timeout;
 
     // 0 -> open, 100 -> touching sill, 200 -> closed gaps
     float percentage_closed;

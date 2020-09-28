@@ -1,6 +1,8 @@
 #include "Shutter.h"
 #include "math.h"
 
+#define SHUTTER_SUBSCRIPTION_CONFIDENCE_TIMEOUT (300)
+
 Shutter::Shutter(stPins Pins, stTimings Timings, String topic_base, PubSubClient* client)
 {
   this->Pins = Pins;
@@ -11,6 +13,19 @@ Shutter::Shutter(stPins Pins, stTimings Timings, String topic_base, PubSubClient
 
 void Shutter::callback(String topic, String payload)
 {
+  if (this->confidence_subscription_timeout && topic == (this->topic_base + SHUTTER_TOPIC_POSITION_PUBLISH_DETAILED))
+  {
+    this->movement_state = mvSTOPPED;
+    this->percentage_closed = payload.toFloat();
+    mqttClient->unsubscribe(topic.c_str());
+    this->confidence_subscription_timeout = 0;
+    this->is_confident = true;
+    return;
+  }
+  if (topic.startsWith(this->topic_base))
+  {
+    topic = topic.substring(this->topic_base.length());
+  }
 
 }
 
@@ -20,13 +35,12 @@ void Shutter::setSubscriptions()
   mqttClient->subscribe(tempTopic.c_str());
   tempTopic = this->topic_base + SHUTTER_TOPIC_COMMAND;
   mqttClient->subscribe(tempTopic.c_str());
-}
-
-void Shutter::mqttReconnect()
-{
-  this->percentage_closed_published = -1.0f;
-  this->state_published = UNDEFINED;
-  this->publishAll(true);
+  if (!this->is_confident)
+  {
+    tempTopic = this->topic_base + SHUTTER_TOPIC_POSITION_PUBLISH_DETAILED;
+    mqttClient->subscribe(tempTopic.c_str());
+    this->confidence_subscription_timeout = millis() + SHUTTER_SUBSCRIPTION_CONFIDENCE_TIMEOUT;
+  }
 }
 
 void Shutter::interrupt()
@@ -42,6 +56,11 @@ void Shutter::setup(void (* fcn_interrupt)())
   this->movement_state = stMovementState::mvSTOPPED;
   this->percentage_closed_published = -1.0f;
   this->state_published = UNDEFINED;
+
+  this->actuation_time = 0;
+  this->publish_time = 0;
+  this->confidence_subscription_timeout = 0;
+
   digitalWrite(Pins.actuator.down, RELAIS_LOW);
   digitalWrite(Pins.actuator.up, RELAIS_LOW);
   delay(1);
@@ -58,6 +77,13 @@ void Shutter::setup(void (* fcn_interrupt)())
 
 void Shutter::loop()
 {
+  if (this->confidence_subscription_timeout && millis() > this->confidence_subscription_timeout)
+  {
+    // no data recoverable from MQTT Broker (timed out) -> confidence only gainable by opening fully
+    String tempTopic = this->topic_base + SHUTTER_TOPIC_POSITION_PUBLISH_DETAILED;
+    mqttClient->unsubscribe(tempTopic.c_str());
+    this->confidence_subscription_timeout = 0;
+  }
   this->actuationLoop();
 }
 
