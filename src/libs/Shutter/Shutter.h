@@ -3,7 +3,6 @@
 
 #include "PubSubClient.h"
 #include "Shutter_config.h"
-#include "EEPROM.h"
 
 class Shutter
 {
@@ -54,8 +53,7 @@ class Shutter
       unsigned int full_opening;
     };
 
-    Shutter(stPins Pins, stTimings Timings, String topic_base,
-      unsigned int eep_addr, PubSubClient* client, EEPROMClass* eep);
+    Shutter(stPins Pins, stTimings Timings, String topic_base, PubSubClient* client);
 
     void callback(String topic, String payload);
     void mqttReconnect();
@@ -73,9 +71,7 @@ class Shutter
     stPins Pins;
     stTimings Timings;
     String topic_base;
-    unsigned int eep_addr;
     PubSubClient* mqttClient;
-    EEPROMClass* eep;
 
     // saving for interrupt handling
     bool save_up;

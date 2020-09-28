@@ -1,16 +1,12 @@
 #include "Shutter.h"
-#include "EEPROM.h"
 #include "math.h"
 
-Shutter::Shutter(stPins Pins, stTimings Timings, String topic_base, 
-  unsigned int eep_addr, PubSubClient* client, EEPROMClass* eep)
+Shutter::Shutter(stPins Pins, stTimings Timings, String topic_base, PubSubClient* client)
 {
   this->Pins = Pins;
   this->Timings = Timings;
   this->topic_base = topic_base;
-  this->eep_addr = eep_addr;
   this->mqttClient = client;
-  this->eep = eep;
 }
 
 void Shutter::callback(String topic, String payload)
@@ -40,11 +36,7 @@ void Shutter::interrupt()
 
 void Shutter::setup(void (* fcn_interrupt)())
 {
-  this->percentage_closed = eep->read(this->eep_addr);
-  if (this->percentage_closed < 0.0f || this->percentage_closed > 200.0f)
-  {
-    this->percentage_closed = NAN;
-  }
+  this->percentage_closed = NAN;
   this->is_confident = false;
   this->queued_target_value = -1.0f;
   this->movement_state = stMovementState::mvSTOPPED;
@@ -114,7 +106,6 @@ void Shutter::actuationRaw(stMovementState toMove, unsigned int duration)
   {
     this->movement_state = toMove;
     unsigned int time = this->updateOutput();
-    ;
     this->calcBase.state = toMove;
     this->calcBase.startTime = time;
     this->calcBase.t0 = 0;
