@@ -359,6 +359,11 @@ void Shutter::setTarget(float targetValue)
   }
 }
 
+Shutter::stMovementState Shutter::getMovementState() const
+{
+  return this->movement_state;
+}
+
 Shutter::stState Shutter::getState() const
 {
   if (this->movement_state == mvSTOPPED)

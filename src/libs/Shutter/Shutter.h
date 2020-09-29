@@ -63,6 +63,7 @@ class Shutter
     void loop();
 
     stState getState() const;
+    stMovementState getMovementState() const;
     float getClosedPercentage() const;
     bool getConfidence() const;
 

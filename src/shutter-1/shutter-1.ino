@@ -147,7 +147,7 @@ void check_connectivity()
     if(!connectivity_timevar || millis() > connectivity_timevar)
     {
       n_attempts++;
-      if(n_attempts > 10)
+      if(n_attempts > 10 && Only_Shutter.getMovementState() == Shutter::stMovementState::mvSTOPPED)
       {
         Serial.println("WiFi unable to reconnect. Rebooting ESP device!");
         ESP.restart();
