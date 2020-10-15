@@ -6,6 +6,7 @@
 
 #define RELAIS_LOW (0)
 #define RELAIS_HIGH (1)
+#define BUTTON_ACTIVE_LOW 1
 
 #define SHUTTER_TOPIC_STATE_PUBLISH "/state/current"
 #define SHUTTER_TOPIC_MVSTATE_PUBLISH "/state/movement"
@@ -26,3 +27,9 @@
 #define SHUTTER_PAYLOAD_COMMAND_OPEN "open"
 #define SHUTTER_PAYLOAD_COMMAND_CLOSE "close"
 #define SHUTTER_PAYLOAD_COMMAND_STOP "stop"
+
+#define SHUTTER_TOPIC_EMULATE_UP "/emulate/upwards"
+#define SHUTTER_TOPIC_EMULATE_DOWN "/emulate/downwards"
+
+#define SHUTTER_PAYLOAD_BUT_DOWN "pressed"
+#define SHUTTER_PAYLOAD_BUT_UP "released"

@@ -101,6 +101,11 @@ class Shutter
     void actuationLoop();
     unsigned int updateOutput();
 
+    void ButtonUpwardsPressed();
+    void ButtonUpwardsReleased();
+    void ButtonDownwardsPressed();
+    void ButtonDownwardsReleased();
+
     void setTarget(float targetValue);
     void calibrate();
 

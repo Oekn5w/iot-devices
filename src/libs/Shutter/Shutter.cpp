@@ -45,7 +45,40 @@ void Shutter::setSubscriptions()
 
 void Shutter::interrupt()
 {
-
+  int read_up = digitalRead(Pins.input.up);
+  int read_down = digitalRead(Pins.input.down);
+  if(read_down ^ this->save_down)
+  {
+#if BUTTON_ACTIVE_LOW
+    if(!read_down)
+#else
+  	if(read_down)
+#endif
+    {
+      this->ButtonDownwardsPressed();
+    }
+    else
+    {
+      this->ButtonDownwardsReleased();
+    }
+    this->save_down = read_down;
+  }
+  if(read_up ^ this->save_up)
+  {
+#if BUTTON_ACTIVE_LOW
+    if(!read_up)
+#else
+  	if(read_up)
+#endif
+    {
+      this->ButtonUpwardsPressed();
+    }
+    else
+    {
+      this->ButtonUpwardsReleased();
+    }
+    this->save_up = read_up;
+  }
 }
 
 void Shutter::setup(void (* fcn_interrupt)())
@@ -335,6 +368,26 @@ unsigned int Shutter::getRelativeTime(float percentage, stMovementState movement
     default:
       return 0;
   }
+}
+
+void Shutter::ButtonUpwardsPressed()
+{
+
+}
+
+void Shutter::ButtonUpwardsReleased()
+{
+
+}
+
+void Shutter::ButtonDownwardsPressed()
+{
+
+}
+
+void Shutter::ButtonDownwardsReleased()
+{
+
 }
 
 void Shutter::setTarget(float targetValue)
