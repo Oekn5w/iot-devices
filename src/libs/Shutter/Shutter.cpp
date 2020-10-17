@@ -25,8 +25,49 @@ void Shutter::callback(String topic, String payload)
   if (topic.startsWith(this->topic_base))
   {
     topic = topic.substring(this->topic_base.length());
+    if (topic == SHUTTER_TOPIC_COMMAND)
+    {
+      if (payload == SHUTTER_PAYLOAD_COMMAND_OPEN)
+      {
+        this->setTarget(0.0f);
+      }
+      else if (payload == SHUTTER_PAYLOAD_COMMAND_CLOSE)
+      {
+        this->setTarget(SHUTTER_PAYLOAD_COMMAND_CLOSE_TARGET);
+      }
+      else if (payload == SHUTTER_PAYLOAD_COMMAND_STOP)
+      {
+        this->actuationRaw(stMovementState::mvSTOPPED, 0);
+      }
+    }
+    else if (topic == SHUTTER_TOPIC_POSITION_COMMAND)
+    {
+      float target = payload.toFloat();
+      this->setTarget(target);
+    }
+    else if (topic == SHUTTER_TOPIC_EMULATE_UP)
+    {
+      if (payload == SHUTTER_PAYLOAD_BUT_UP)
+      {
+        this->ButtonUpwardsReleased();
+      }
+      else if(payload == SHUTTER_PAYLOAD_BUT_DOWN)
+      {
+        this->ButtonUpwardsPressed();
+      }
+    }
+    else if (topic == SHUTTER_TOPIC_EMULATE_DOWN)
+    {
+      if (payload == SHUTTER_PAYLOAD_BUT_UP)
+      {
+        this->ButtonDownwardsReleased();
+      }
+      else if(payload == SHUTTER_PAYLOAD_BUT_DOWN)
+      {
+        this->ButtonDownwardsPressed();
+      }
+    }
   }
-
 }
 
 void Shutter::setSubscriptions()
@@ -129,7 +170,7 @@ void Shutter::actuation(float targetValue)
     {
       return;
     }
-    unsigned int t0, t1, duration, extra = 0;
+    typeDeltaTime t0, t1, duration, extra = 0;
     stMovementState nextMove;
     if (this->percentage_closed > targetValue)
     {
