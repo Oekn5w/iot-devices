@@ -76,6 +76,10 @@ void Shutter::setSubscriptions()
   mqttClient->subscribe(tempTopic.c_str());
   tempTopic = this->topic_base + SHUTTER_TOPIC_COMMAND;
   mqttClient->subscribe(tempTopic.c_str());
+  tempTopic = this->topic_base + SHUTTER_TOPIC_EMULATE_DOWN;
+  mqttClient->subscribe(tempTopic.c_str());
+  tempTopic = this->topic_base + SHUTTER_TOPIC_EMULATE_UP;
+  mqttClient->subscribe(tempTopic.c_str());
   if (!this->is_confident)
   {
     tempTopic = this->topic_base + SHUTTER_TOPIC_POSITION_PUBLISH_DETAILED;
@@ -211,6 +215,7 @@ void Shutter::actuationRaw(stMovementState toMove, typeDeltaTime duration)
     this->calcBase.startTime = time;
     this->calcBase.t0 = 0;
     this->calcBase.endTime = time + duration;
+    this->actuation_time = this->calcBase.endTime;
     this->calcBase.startPercentage = this->percentage_closed;
     this->publish_time = time;
     this->publishAll(true);
