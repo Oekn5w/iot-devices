@@ -154,7 +154,7 @@ void Shutter::actuation(float targetValue)
   
 }
 
-void Shutter::actuationRaw(stMovementState toMove, unsigned int duration)
+void Shutter::actuationRaw(stMovementState toMove, typeDeltaTime duration)
 {
   if (toMove == mvSTOPPED)
   {
@@ -164,7 +164,7 @@ void Shutter::actuationRaw(stMovementState toMove, unsigned int duration)
   else
   {
     this->movement_state = toMove;
-    unsigned int time = this->updateOutput();
+    typeTime time = this->updateOutput();
     this->calcBase.state = toMove;
     this->calcBase.startTime = time;
     this->calcBase.t0 = 0;
@@ -177,7 +177,7 @@ void Shutter::actuationRaw(stMovementState toMove, unsigned int duration)
 
 void Shutter::actuationLoop()
 {
-  unsigned int time = millis();
+  typeTime time = millis();
   if (this->actuation_time)
   {
     this->percentage_closed = this->getIntermediatePercentage(time);
@@ -226,7 +226,7 @@ void Shutter::calibrate()
   this->actuationRaw(stMovementState::mvOPENING, this->Timings.opening + this->Timings.full_opening + SHUTTER_CALIB_OVERSHOOT);
 }
 
-unsigned int Shutter::updateOutput()
+typeTime Shutter::updateOutput()
 {
   switch(this->movement_state)
   {
@@ -246,7 +246,7 @@ unsigned int Shutter::updateOutput()
   return millis();
 }
 
-float Shutter::getIntermediatePercentage(unsigned int time)
+float Shutter::getIntermediatePercentage(typeTime time)
 {
   if (time > this->calcBase.endTime) { time = this->calcBase.endTime; }
   if (!this->calcBase.t0)
@@ -273,7 +273,7 @@ float Shutter::getIntermediatePercentage(unsigned int time)
   return this->getPercentage(time - this->calcBase.t0, this->calcBase.state);
 }
 
-float Shutter::getPercentage(unsigned int trel, stMovementState movement, float fallback) const
+float Shutter::getPercentage(typeDeltaTime trel, stMovementState movement, float fallback) const
 {
   switch (movement)
   {
@@ -322,7 +322,7 @@ float Shutter::getPercentage(unsigned int trel, stMovementState movement, float 
   }
 }
 
-unsigned int Shutter::getRelativeTime(float percentage, stMovementState movement) const
+typeDeltaTime Shutter::getRelativeTime(float percentage, stMovementState movement) const
 {
   percentage = clampPercentage(percentage);
   switch (movement)
@@ -516,7 +516,7 @@ void Shutter::publishValue(bool checkConnectivity, bool forcePublish)
 {
   if (!checkConnectivity || this->mqttClient->connected())
   {
-    if (forcePublish || this->percentage_closed_published < 0.0f || abs(this->percentage_closed - this->percentage_closed_published) > 0.1f)
+    if (forcePublish || this->percentage_closed_published < 0.0f || ! equalWithEps(this->percentage_closed - this->percentage_closed_published))
     {
       char payload[10];
       bool retain = (this->movement_state == mvSTOPPED);
