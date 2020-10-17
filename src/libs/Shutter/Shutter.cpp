@@ -134,6 +134,7 @@ void Shutter::setup(void (* fcn_interrupt)())
   this->actuation_time = 0;
   this->publish_time = 0;
   this->confidence_subscription_timeout = 0;
+  this->button_time = 0;
 
   digitalWrite(Pins.actuator.down, RELAIS_LOW);
   digitalWrite(Pins.actuator.up, RELAIS_LOW);
@@ -413,22 +414,32 @@ typeDeltaTime Shutter::getRelativeTime(float percentage, stMovementState movemen
 
 void Shutter::ButtonUpwardsPressed()
 {
-
+  this->setTarget(0.0f);
+  this->button_time = millis() + SHUTTER_TIMEOUT_BUTTON;
 }
 
 void Shutter::ButtonUpwardsReleased()
 {
-
+  if (this->button_time && millis() > this->button_time)
+  {
+    this->actuationRaw(stMovementState::mvSTOPPED, 0);
+  }
+  this->button_time = 0;
 }
 
 void Shutter::ButtonDownwardsPressed()
 {
-
+  this->setTarget(SHUTTER_PAYLOAD_COMMAND_CLOSE_TARGET);
+  this->button_time = millis() + SHUTTER_TIMEOUT_BUTTON;
 }
 
 void Shutter::ButtonDownwardsReleased()
 {
-
+  if (this->button_time && millis() > this->button_time)
+  {
+    this->actuationRaw(stMovementState::mvSTOPPED, 0);
+  }
+  this->button_time = 0;
 }
 
 void Shutter::setTarget(float targetValue)

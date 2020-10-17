@@ -89,6 +89,7 @@ class Shutter
     typeTime actuation_time;
     typeTime publish_time;
     typeTime confidence_subscription_timeout;
+    typeTime button_time;
 
     // 0 -> open, 100 -> touching sill, 200 -> closed gaps
     float percentage_closed;
