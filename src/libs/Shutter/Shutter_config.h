@@ -28,9 +28,3 @@
 #define SHUTTER_PAYLOAD_COMMAND_CLOSE "close"
 #define SHUTTER_PAYLOAD_COMMAND_CLOSE_TARGET (125.0f)
 #define SHUTTER_PAYLOAD_COMMAND_STOP "stop"
-
-#define SHUTTER_TOPIC_EMULATE_UP "/emulate/upwards"
-#define SHUTTER_TOPIC_EMULATE_DOWN "/emulate/downwards"
-
-#define SHUTTER_PAYLOAD_BUT_DOWN "pressed"
-#define SHUTTER_PAYLOAD_BUT_UP "released"

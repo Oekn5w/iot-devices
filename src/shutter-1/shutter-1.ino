@@ -182,7 +182,7 @@ void check_connectivity()
         client.publish(TOPIC_BOARD_BUILDVER, _BuildInfo.src_version, true);
         String buildtime = String(_BuildInfo.date) + "T" + String(_BuildInfo.time);
         client.publish(TOPIC_BOARD_BUILDTIME, buildtime.c_str(), true);
-        Only_Shutter.setSubscriptions();
+        Only_Shutter.setupMQTT();
         Serial.println("MQTT connected!");
       }
       else

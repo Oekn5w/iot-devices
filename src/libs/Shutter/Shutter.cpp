@@ -45,40 +45,14 @@ void Shutter::callback(String topic, String payload)
       float target = payload.toFloat();
       this->setTarget(target);
     }
-    else if (topic == SHUTTER_TOPIC_EMULATE_UP)
-    {
-      if (payload == SHUTTER_PAYLOAD_BUT_UP)
-      {
-        this->ButtonUpwardsReleased();
-      }
-      else if(payload == SHUTTER_PAYLOAD_BUT_DOWN)
-      {
-        this->ButtonUpwardsPressed();
-      }
-    }
-    else if (topic == SHUTTER_TOPIC_EMULATE_DOWN)
-    {
-      if (payload == SHUTTER_PAYLOAD_BUT_UP)
-      {
-        this->ButtonDownwardsReleased();
-      }
-      else if(payload == SHUTTER_PAYLOAD_BUT_DOWN)
-      {
-        this->ButtonDownwardsPressed();
-      }
-    }
   }
 }
 
-void Shutter::setSubscriptions()
+void Shutter::setupMQTT()
 {
   String tempTopic = this->topic_base + SHUTTER_TOPIC_POSITION_COMMAND;
   mqttClient->subscribe(tempTopic.c_str());
   tempTopic = this->topic_base + SHUTTER_TOPIC_COMMAND;
-  mqttClient->subscribe(tempTopic.c_str());
-  tempTopic = this->topic_base + SHUTTER_TOPIC_EMULATE_DOWN;
-  mqttClient->subscribe(tempTopic.c_str());
-  tempTopic = this->topic_base + SHUTTER_TOPIC_EMULATE_UP;
   mqttClient->subscribe(tempTopic.c_str());
   if (!this->is_confident)
   {

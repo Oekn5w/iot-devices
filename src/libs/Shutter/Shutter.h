@@ -59,7 +59,7 @@ class Shutter
     Shutter(stPins Pins, stTimings Timings, String topic_base, PubSubClient* client);
 
     void callback(String topic, String payload);
-    void setSubscriptions();
+    void setupMQTT();
     void interrupt();
 
     void setup(void (* fcn_interrupt)());
