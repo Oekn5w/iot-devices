@@ -1,7 +1,7 @@
 #include "Shutter.h"
 #include "math.h"
 
-#define SHUTTER_SUBSCRIPTION_CONFIDENCE_TIMEOUT (300)
+#define SHUTTER_SUBSCRIPTION_CONFIDENCE_TIMEOUT (1000)
 
 Shutter::Shutter(stPins Pins, stTimings Timings, String topic_base, PubSubClient* client)
 {
@@ -237,7 +237,7 @@ void Shutter::actuationLoop()
         this->percentage_closed = this->getIntermediatePercentage(time);
         this->publish_time = 0;
         this->publishAll(true);
-        if (this->queued_target_value == -1.0f)
+        if (this->queued_target_value != -1.0f)
         {
           // 500ms delay before queued value is executed
           this->actuation_time = time + 500;
