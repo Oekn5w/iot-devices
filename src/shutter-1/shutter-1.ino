@@ -124,7 +124,7 @@ void loop()
   Therm_Relais.loop();
   Only_Shutter.loop();
 
-  delay(50);
+  delay(20);
 }
 
 void mqtt_callback(char* topic, byte* payload, unsigned int length)
