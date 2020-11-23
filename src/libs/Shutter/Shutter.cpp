@@ -1,8 +1,6 @@
 #include "Shutter.h"
 #include "math.h"
 
-#define SHUTTER_SUBSCRIPTION_CONFIDENCE_TIMEOUT (1000)
-
 Shutter::Shutter(stPins Pins, stTimings Timings, String topic_base, PubSubClient* client)
 {
   this->Pins = Pins;
@@ -58,7 +56,7 @@ void Shutter::setupMQTT()
   {
     tempTopic = this->topic_base + SHUTTER_TOPIC_POSITION_PUBLISH_DETAILED;
     mqttClient->subscribe(tempTopic.c_str());
-    this->confidence_subscription_timeout = millis() + SHUTTER_SUBSCRIPTION_CONFIDENCE_TIMEOUT;
+    this->confidence_subscription_timeout = millis() + SHUTTER_MQTT_SUBSCRIPTION_RETAIN_TIMEOUT;
   }
 }
 

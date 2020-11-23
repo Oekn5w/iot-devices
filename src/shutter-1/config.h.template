@@ -1,7 +1,7 @@
 #define SHUTTER_PIN_OUT_1 (14)
 #define SHUTTER_PIN_OUT_2 (12)
-#define SHUTTER_PIN_IN_1 (4)
-#define SHUTTER_PIN_IN_2 (13)
+#define SHUTTER_PIN_IN_1 (13)
+#define SHUTTER_PIN_IN_2 (4)
 
 #if SHUTTER_SINGLE_ID == 0
 #define MQTT_CLIENT_ID "ESP8266-Shutter-dev"

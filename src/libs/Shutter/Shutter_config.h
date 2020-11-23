@@ -1,6 +1,7 @@
 // Time [ms] up to which the shutter travels to the next major stop (full open - on sill - full closed)
 #define SHUTTER_TIMEOUT_BUTTON (700)
 #define SHUTTER_CALIB_OVERSHOOT (2000)
+#define SHUTTER_MQTT_SUBSCRIPTION_RETAIN_TIMEOUT (1000)
 
 #define SHUTTER_PUBLISH_INTERVAL (100)
 
