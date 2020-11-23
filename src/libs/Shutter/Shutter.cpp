@@ -23,25 +23,39 @@ void Shutter::callback(String topic, String payload)
   if (topic.startsWith(this->topic_base))
   {
     topic = topic.substring(this->topic_base.length());
-    if (topic == SHUTTER_TOPIC_COMMAND)
+    if (!this->calibrationMode)
     {
-      if (payload == SHUTTER_PAYLOAD_COMMAND_OPEN)
+      if (topic == SHUTTER_TOPIC_COMMAND)
       {
-        this->setTarget(0.0f);
+        if (payload == SHUTTER_PAYLOAD_COMMAND_OPEN)
+        {
+          this->setTarget(0.0f);
+        }
+        else if (payload == SHUTTER_PAYLOAD_COMMAND_CLOSE)
+        {
+          this->setTarget(SHUTTER_PAYLOAD_COMMAND_CLOSE_TARGET);
+        }
+        else if (payload == SHUTTER_PAYLOAD_COMMAND_STOP)
+        {
+          this->actuationRaw(stMovementState::mvSTOPPED, 0);
+        }
       }
-      else if (payload == SHUTTER_PAYLOAD_COMMAND_CLOSE)
+      else if (topic == SHUTTER_TOPIC_POSITION_COMMAND)
       {
-        this->setTarget(SHUTTER_PAYLOAD_COMMAND_CLOSE_TARGET);
+        float target = payload.toFloat();
+        this->setTarget(target);
       }
-      else if (payload == SHUTTER_PAYLOAD_COMMAND_STOP)
+      else if (topic == SHUTTER_TOPIC_CALIBRATE_COMMAND && payload == SHUTTER_PAYLOAD_CALIBRATE_START)
       {
-        this->actuationRaw(stMovementState::mvSTOPPED, 0);
+        this->calibrationInit();
       }
     }
-    else if (topic == SHUTTER_TOPIC_POSITION_COMMAND)
+    else
     {
-      float target = payload.toFloat();
-      this->setTarget(target);
+      if (topic == SHUTTER_TOPIC_CALIBRATE_COMMAND && payload == SHUTTER_PAYLOAD_CALIBRATE_ABORT)
+      {
+        this->calibrationAbort();
+      }
     }
   }
 }
@@ -58,6 +72,7 @@ void Shutter::setupMQTT()
     mqttClient->subscribe(tempTopic.c_str());
     this->confidence_subscription_timeout = millis() + SHUTTER_MQTT_SUBSCRIPTION_RETAIN_TIMEOUT;
   }
+  this->calibration_subscription_timeout = millis() + SHUTTER_MQTT_SUBSCRIPTION_RETAIN_TIMEOUT;
   tempTopic = this->topic_base + SHUTTER_TOPIC_CONFIG;
   String payload = this->Timings.toString();
   mqttClient->publish(tempTopic.c_str(), payload.c_str(), true);
@@ -115,6 +130,11 @@ void Shutter::setup(void (* fcn_interrupt)())
   this->confidence_subscription_timeout = 0;
   this->button_time = 0;
 
+  this->calibration_subscription_timeout = 0;
+  this->calibration_timeout = 0;
+  this->calibrationMode = false;
+  this->calibrationState = 0;
+
   digitalWrite(Pins.actuator.down, RELAIS_LOW);
   digitalWrite(Pins.actuator.up, RELAIS_LOW);
   delay(1);
@@ -138,7 +158,20 @@ void Shutter::loop()
     mqttClient->unsubscribe(tempTopic.c_str());
     this->confidence_subscription_timeout = 0;
   }
-  this->actuationLoop();
+  if (this->calibration_subscription_timeout && millis() > this->calibration_subscription_timeout)
+  {
+    String tempTopic = this->topic_base + SHUTTER_TOPIC_CALIBRATE_COMMAND;
+    mqttClient->subscribe(tempTopic.c_str());
+    this->calibration_subscription_timeout = 0;
+  }
+  if (!this->calibrationMode)
+  {
+    this->actuationLoop();
+  }
+  else
+  {
+    this->calibrationLoop();
+  }
 }
 
 void Shutter::actuation(float targetValue)
@@ -394,32 +427,103 @@ typeDeltaTime Shutter::getRelativeTime(float percentage, stMovementState movemen
 
 void Shutter::ButtonUpwardsPressed()
 {
-  this->setTarget(0.0f);
-  this->button_time = millis() + SHUTTER_TIMEOUT_BUTTON;
+  if (!this->calibrationMode)
+  {
+    this->setTarget(0.0f);
+    this->button_time = millis() + SHUTTER_TIMEOUT_BUTTON;
+  }
+  else
+  {
+    if (this->calibrationState != 1)
+    {
+      this->movement_state = mvOPENING;
+      this->calibrationCache = this->updateOutput();
+    }
+  }
 }
 
 void Shutter::ButtonUpwardsReleased()
 {
-  if (this->button_time && millis() > this->button_time)
+  if (!this->calibrationMode)
   {
-    this->actuationRaw(stMovementState::mvSTOPPED, 0);
+    if (this->button_time && millis() > this->button_time)
+    {
+      this->actuationRaw(stMovementState::mvSTOPPED, 0);
+    }
+    this->button_time = 0;
   }
-  this->button_time = 0;
+  else
+  {
+    if (this->calibrationState != 1)
+    {
+      this->movement_state = mvSTOPPED;
+      typeTime tmptime = this->updateOutput();
+      if (tmptime - this->calibrationCache < 20) { return; }
+      if (this->calibrationState == 2)
+      {
+        this->calibrationTimings.full_opening = tmptime - this->calibrationCache;
+        this->calibrationPublish();
+        this->calibrationState = 3;
+      }
+      else if (this->calibrationState == 3)
+      {
+        this->calibrationTimings.opening = tmptime - this->calibrationCache;
+        this->calibrationPublish(true);
+        this->calibrationTimings = {0, 0, 0, 0};
+        this->calibrationState = 0;
+      }
+    }
+  }
 }
 
 void Shutter::ButtonDownwardsPressed()
 {
-  this->setTarget(SHUTTER_PAYLOAD_COMMAND_CLOSE_TARGET);
-  this->button_time = millis() + SHUTTER_TIMEOUT_BUTTON;
+  if (!this->calibrationMode)
+  {
+    this->setTarget(SHUTTER_PAYLOAD_COMMAND_CLOSE_TARGET);
+    this->button_time = millis() + SHUTTER_TIMEOUT_BUTTON;
+  }
+  else
+  {
+    if (this->calibrationState <= 1)
+    {
+      this->movement_state = mvCLOSING;
+      this->calibrationCache = this->updateOutput();
+    }
+  }
 }
 
 void Shutter::ButtonDownwardsReleased()
 {
-  if (this->button_time && millis() > this->button_time)
+  if (!this->calibrationMode)
   {
-    this->actuationRaw(stMovementState::mvSTOPPED, 0);
+    if (this->button_time && millis() > this->button_time)
+    {
+      this->actuationRaw(stMovementState::mvSTOPPED, 0);
+    }
+    this->button_time = 0;
   }
-  this->button_time = 0;
+  else
+  {
+    if (this->calibrationState <= 1)
+    {
+      this->movement_state = mvSTOPPED;
+      typeTime tmptime = this->updateOutput();
+      if (tmptime - this->calibrationCache < 20) { return; }
+      if (this->calibrationState == 0)
+      {
+        this->calibrationTimings.closing = tmptime - this->calibrationCache;
+        this->calibrationPublish();
+        this->calibrationState = 1;
+      }
+      else if (this->calibrationState == 1)
+      {
+        this->calibrationTimings.full_closing = tmptime - this->calibrationCache;
+        this->calibrationPublish();
+        this->calibrationState = 2;
+      }
+    }
+  }
 }
 
 void Shutter::setTarget(float targetValue)
@@ -515,6 +619,11 @@ void Shutter::publishState(bool checkConnectivity, bool forcePublish)
           payload = "undefined";
           break;
       }
+      if (this->calibrationMode)
+      {
+        payload = "calibrating";
+        retain = false;
+      }
       String topic = this->topic_base + SHUTTER_TOPIC_STATE_PUBLISH;
       this->mqttClient->publish(topic.c_str(), payload.c_str(), retain);
       this->state_published = tempState;
@@ -541,6 +650,49 @@ void Shutter::publishState(bool checkConnectivity, bool forcePublish)
       this->mqttClient->publish(topic.c_str(), payload.c_str(), retain);
       this->movement_state_published = this->movement_state;
     }
+  }
+}
+
+void Shutter::calibrationLoop()
+{
+  typeTime time = millis();
+  if (this->calibration_timeout && time > this->calibration_timeout)
+  {
+    this->calibrationAbort();
+  }
+}
+
+void Shutter::calibrationInit()
+{
+  this->calibrationMode = true;
+  this->calibration_timeout = millis() + SHUTTER_CALIBRATION_TIMEOUT;
+  this->movement_state = mvSTOPPED;
+  this->updateOutput();
+  this->calibrationState = 0;
+  this->calibrationCache = 0;
+  this->calibrationTimings = {0, 0, 0, 0};
+  this->publishState(true, true);
+}
+
+void Shutter::calibrationAbort()
+{
+  this->calibrationMode = false;
+  this->calibration_timeout = 0;
+  this->movement_state = mvSTOPPED;
+  this->updateOutput();
+  this->calibrationPublish();
+  this->publishState(true, true);
+}
+
+void Shutter::calibrationPublish(bool publishFinal)
+{
+  String tempTopic = this->topic_base + SHUTTER_TOPIC_CALIBRATE_PUBLISH_INTERMEDIATE;
+  String payload = this->calibrationTimings.toString();
+  this->mqttClient->publish(tempTopic.c_str(), payload.c_str(), false);
+  if (publishFinal)
+  {
+    tempTopic = this->topic_base + SHUTTER_TOPIC_CALIBRATE_PUBLISH;
+    this->mqttClient->publish(tempTopic.c_str(), payload.c_str(), false);
   }
 }
 

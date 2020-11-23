@@ -54,6 +54,16 @@ class Shutter
 
       // downwards motor shutoff to barely touching the sill
       typeDeltaTime full_opening;
+
+      String toString() const
+      {
+          return (
+            "[" + String(this->closing) + 
+            "," + String(this->full_closing) +
+            "," + String(this->opening) +
+            "," + String(this->full_opening) +
+            "]");
+      };
     };
 
     Shutter(stPins Pins, stTimings Timings, String topic_base, PubSubClient* client);
@@ -89,6 +99,7 @@ class Shutter
     typeTime actuation_time;
     typeTime publish_time;
     typeTime confidence_subscription_timeout;
+    typeTime calibration_subscription_timeout;
     typeTime button_time;
 
     // 0 -> open, 100 -> touching sill, 200 -> closed gaps
@@ -99,6 +110,16 @@ class Shutter
     stMovementState movement_state_published;
 
     bool is_confident;
+
+    bool calibrationMode;
+    typeTime calibration_timeout;
+    int calibrationState;
+    stTimings calibrationTimings;
+    typeTime calibrationCache;
+    void calibrationLoop();
+    void calibrationAbort();
+    void calibrationInit();
+    void calibrationPublish(bool publishFinal = false);
 
     void actuation(float targetValue);
     void actuationRaw(stMovementState toMove, typeDeltaTime duration);
