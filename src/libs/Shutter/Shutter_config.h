@@ -24,6 +24,8 @@
 #define SHUTTER_TOPIC_POSITION_PUBLISH "/position/current"
 #define SHUTTER_TOPIC_POSITION_PUBLISH_DETAILED "/position/detailed"
 
+#define SHUTTER_TOPIC_CONFIG "/configuration"
+
 #define SHUTTER_TOPIC_COMMAND "/command"
 #define SHUTTER_PAYLOAD_COMMAND_OPEN "open"
 #define SHUTTER_PAYLOAD_COMMAND_CLOSE "close"

@@ -58,6 +58,9 @@ void Shutter::setupMQTT()
     mqttClient->subscribe(tempTopic.c_str());
     this->confidence_subscription_timeout = millis() + SHUTTER_MQTT_SUBSCRIPTION_RETAIN_TIMEOUT;
   }
+  tempTopic = this->topic_base + SHUTTER_TOPIC_CONFIG;
+  String payload = this->Timings.toString();
+  mqttClient->publish(tempTopic.c_str(), payload.c_str(), true);
 }
 
 void Shutter::interrupt()
