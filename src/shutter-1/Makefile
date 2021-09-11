@@ -19,6 +19,8 @@ ifneq ($(SHUTTER_SINGLE_ID), 0)
 BUILD_DIR := $(THIS_DIR)/build-id$(SHUTTER_SINGLE_ID)
 endif
 
+CPP_EXTRA := -DSHUTTER_SINGLE_ID=$(SHUTTER_SINGLE_ID)
+
 include $(THIS_DIR)/secrets.mk
 
 include $(ESP_DEP_ROOT)/makeEspArduino/makeEspArduino.mk

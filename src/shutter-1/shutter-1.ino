@@ -3,7 +3,7 @@
 #include <buildinfo.h>
 
 #ifndef SHUTTER_SINGLE_ID
-#define SHUTTER_SINGLE_ID 0
+#error "No shutter ID supplied by build chain!"
 #endif
 
 #include "secrets.h"
