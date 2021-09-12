@@ -467,8 +467,15 @@ void Shutter::ButtonUpwardsPressed()
 {
   if (!this->calibrationMode)
   {
-    this->setTarget(0.0f);
-    this->button_time = millis() + SHUTTER_TIMEOUT_BUTTON;
+    if (this->movement_state == mvCLOSING)
+    {
+      this->actuationRaw(stMovementState::mvSTOPPED, 0);
+    }
+    else if (this->movement_state == mvSTOPPED)
+    {
+      this->setTarget(0.0f);
+      this->button_time = millis() + SHUTTER_TIMEOUT_BUTTON;
+    }
   }
   else
   {
@@ -518,8 +525,15 @@ void Shutter::ButtonDownwardsPressed()
 {
   if (!this->calibrationMode)
   {
-    this->setTarget(SHUTTER_PAYLOAD_COMMAND_CLOSE_TARGET);
-    this->button_time = millis() + SHUTTER_TIMEOUT_BUTTON;
+    if (this->movement_state == mvOPENING)
+    {
+      this->actuationRaw(stMovementState::mvSTOPPED, 0);
+    }
+    else if (this->movement_state == mvSTOPPED)
+    {
+      this->setTarget(SHUTTER_PAYLOAD_COMMAND_CLOSE_TARGET);
+      this->button_time = millis() + SHUTTER_TIMEOUT_BUTTON;
+    }
   }
   else
   {
