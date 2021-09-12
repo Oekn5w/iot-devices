@@ -1,11 +1,6 @@
 #include "Shutter.h"
 #include "math.h"
 
-#if BUTTON_ACTIVE_LOW
-  #define BUTTON_IF_OPERATOR !
-#else
-  #define BUTTON_IF_OPERATOR
-#endif
 #define BUTTON_DEBOUNCE_TIME (10)
 
 Shutter::Shutter(stPins Pins, stTimings Timings, String topic_base, PubSubClient* client)
@@ -92,11 +87,19 @@ void Shutter::interrupt()
   int debounced;
   if(read_down ^ this->save_down)
   {
-    if( BUTTON_IF_OPERATOR read_down)
+#if BUTTON_ACTIVE_LOW
+    if(!read_down)
+#else
+  	if(read_down)
+#endif
     {
       delay(BUTTON_DEBOUNCE_TIME);
       debounced = digitalRead(Pins.input.down);
-      if( BUTTON_IF_OPERATOR debounced)
+#if BUTTON_ACTIVE_LOW
+      if(!debounced)
+#else
+      if(debounced)
+#endif
       {
         this->ButtonDownwardsPressed();
       }
@@ -105,7 +108,11 @@ void Shutter::interrupt()
     {
       delay(BUTTON_DEBOUNCE_TIME);
       debounced = digitalRead(Pins.input.down);
-      if(! (BUTTON_IF_OPERATOR debounced))
+#if BUTTON_ACTIVE_LOW
+      if(debounced)
+#else
+      if(!debounced)
+#endif
       {
         this->ButtonDownwardsReleased();
       }
@@ -114,11 +121,19 @@ void Shutter::interrupt()
   }
   if(read_up ^ this->save_up)
   {
-    if( BUTTON_IF_OPERATOR read_up)
+#if BUTTON_ACTIVE_LOW
+    if(!read_up)
+#else
+  	if(read_up)
+#endif
     {
       delay(BUTTON_DEBOUNCE_TIME);
       debounced = digitalRead(Pins.input.up);
-      if( BUTTON_IF_OPERATOR debounced)
+#if BUTTON_ACTIVE_LOW
+      if(!debounced)
+#else
+      if(debounced)
+#endif
       {
         this->ButtonUpwardsPressed();
       }
@@ -127,7 +142,11 @@ void Shutter::interrupt()
     {
       delay(BUTTON_DEBOUNCE_TIME);
       debounced = digitalRead(Pins.input.up);
-      if(! (BUTTON_IF_OPERATOR debounced))
+#if BUTTON_ACTIVE_LOW
+      if(debounced)
+#else
+      if(!debounced)
+#endif
       {
         this->ButtonUpwardsReleased();
       }
