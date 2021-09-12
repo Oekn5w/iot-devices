@@ -80,7 +80,7 @@ void Shutter::setupMQTT()
   mqttClient->publish(tempTopic.c_str(), payload.c_str(), true);
 }
 
-void Shutter::interrupt()
+void Shutter::handleInput()
 {
   int read_up = digitalRead(Pins.input.up);
   int read_down = digitalRead(Pins.input.down);
@@ -155,7 +155,7 @@ void Shutter::interrupt()
   }
 }
 
-void Shutter::setup(void (* fcn_interrupt)())
+void Shutter::setup()
 {
   this->percentage_closed = NAN;
   this->is_confident = false;
@@ -181,11 +181,9 @@ void Shutter::setup(void (* fcn_interrupt)())
   pinMode(Pins.actuator.up, OUTPUT);
   pinMode(Pins.input.down, INPUT_PULLUP);
   pinMode(Pins.input.up, INPUT_PULLUP);
-  delay(1);
+  delay(5);
   this->save_down = digitalRead(Pins.input.down);
   this->save_up = digitalRead(Pins.input.up);
-  attachInterrupt(digitalPinToInterrupt(Pins.input.down), fcn_interrupt, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(Pins.input.up), fcn_interrupt, CHANGE);
 }
 
 void Shutter::loop()
@@ -203,6 +201,7 @@ void Shutter::loop()
     mqttClient->subscribe(tempTopic.c_str());
     this->calibration_subscription_timeout = 0;
   }
+  this->handleInput();
   if (!this->calibrationMode)
   {
     this->actuationLoop();

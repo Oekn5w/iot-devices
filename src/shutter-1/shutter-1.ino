@@ -104,7 +104,7 @@ void setup()
   client.setServer(SECRET_MQTT_HOST, 1883);
 
   Therm_Relais.setup();
-  Only_Shutter.setup(handleInterrupt);
+  Only_Shutter.setup();
 
   client.setCallback(mqtt_callback);
 
@@ -124,7 +124,7 @@ void loop()
   Therm_Relais.loop();
   Only_Shutter.loop();
 
-  delay(20);
+  delay(5);
 }
 
 void mqtt_callback(char* topic, byte* payload, unsigned int length)
@@ -197,9 +197,4 @@ void check_connectivity()
   }
   n_attempts = 0;
   connectivity_timevar = 0;
-}
-
-void IRAM_ATTR handleInterrupt()
-{
-  Only_Shutter.interrupt();
 }

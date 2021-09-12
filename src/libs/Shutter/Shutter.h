@@ -70,9 +70,9 @@ class Shutter
 
     void callback(String topic, String payload);
     void setupMQTT();
-    void interrupt();
+    void handleInput();
 
-    void setup(void (* fcn_interrupt)());
+    void setup();
     void loop();
 
     stState getState() const;
