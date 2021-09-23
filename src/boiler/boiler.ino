@@ -127,11 +127,11 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length)
   {
     if(strPayload == PAYLOAD_HEATER_ON)
     {
-      heater.turn_on();
+      heater.turnOn();
     }
     else if(strPayload == PAYLOAD_HEATER_OFF)
     {
-      heater.turn_off();
+      heater.turnOff();
     }
   }
 }

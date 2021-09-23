@@ -11,13 +11,13 @@
 #define PIN_OFF 1
 #endif
 
-Heater::Heater(byte pin, String topic_status, PubSubClient * mqttclient)
+Heater::Heater(byte pin, String topicStatus, PubSubClient * client)
 {
   this->pin = pin;
-  this->mqttclient = mqttclient;
-  this->topic_status = topic_status;
+  this->mqttClient = client;
+  this->topicStatus = topicStatus;
   this->state = false;
-  this->state_published = false;
+  this->statePublished = false;
 }
 
 void Heater::setup()
@@ -32,9 +32,9 @@ void Heater::loop()
 {
   if(this->state && millis() > this->timeout)
   {
-    this->turn_off();
+    this->turnOff();
   }
-  if(!this->state_published && mqttclient->connected())
+  if(!this->statePublished && mqttClient->connected())
   {
     this->publish();
   }
@@ -42,18 +42,18 @@ void Heater::loop()
 
 void Heater::publish()
 {
-  if(mqttclient->connected())
+  if(mqttClient->connected())
   {
-    mqttclient->publish(topic_status.c_str(), this->state ? PAYLOAD_HEATER_ON : PAYLOAD_HEATER_OFF, true);
-    this->state_published = true;
+    mqttClient->publish(topicStatus.c_str(), this->state ? PAYLOAD_HEATER_ON : PAYLOAD_HEATER_OFF, true);
+    this->statePublished = true;
   }
   else
   {
-    this->state_published = false;
+    this->statePublished = false;
   }
 }
 
-void Heater::turn_on()
+void Heater::turnOn()
 {
   this->timeout = millis() + KEEPALIVE_INTERVAL;
   if (!this->state)
@@ -64,7 +64,7 @@ void Heater::turn_on()
   }
 }
 
-void Heater::turn_off()
+void Heater::turnOff()
 {
   this->timeout = -1;
   if (this->state)

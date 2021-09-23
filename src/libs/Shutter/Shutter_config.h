@@ -7,7 +7,7 @@
 
 #define RELAIS_LOW (0)
 #define RELAIS_HIGH (1)
-#define BUTTON_ACTIVE_LOW 1
+#define BUTTON_ACTIVE_LOW (1)
 
 #define SHUTTER_TOPIC_STATE_PUBLISH "/state/current"
 #define SHUTTER_TOPIC_MVSTATE_PUBLISH "/state/movement"

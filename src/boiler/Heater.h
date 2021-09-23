@@ -9,20 +9,20 @@
 class Heater
 {
   public:
-    Heater(byte pin, String topic_status, PubSubClient * mqttclient);
+    Heater(byte pin, String topicStatus, PubSubClient * client);
 
-    void turn_on();
-    void turn_off();
+    void turnOn();
+    void turnOff();
 
     void setup();
     void loop();
   private:
-    PubSubClient * mqttclient;
+    PubSubClient * mqttClient;
     unsigned long timeout;
-    String topic_status;
+    String topicStatus;
     byte pin;
     bool state;
-    bool state_published;
+    bool statePublished;
 
     void publish();
 };

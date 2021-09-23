@@ -66,7 +66,8 @@ class Shutter
       };
     };
 
-    Shutter(stPins Pins, stTimings Timings, String topic_base, PubSubClient* client);
+    Shutter(stPins Pins, stTimings Timings, String topicBase,
+        PubSubClient* client);
 
     void callback(String topic, String payload);
     void setupMQTT();
@@ -83,36 +84,36 @@ class Shutter
   private:
     stPins Pins;
     stTimings Timings;
-    String topic_base;
+    String topicBase;
     PubSubClient* mqttClient;
 
     // saving for interrupt handling
     int save_up;
     int save_down;
 
-    stMovementState movement_state;
+    stMovementState stateMovement;
 
     stCalcBase calcBase;
 
-    float queued_target_value;
+    float targetValueQueued;
 
-    typeTime actuation_time;
-    typeTime publish_time;
-    typeTime confidence_subscription_timeout;
-    typeTime calibration_subscription_timeout;
-    typeTime button_time;
+    typeTime timeActuation;
+    typeTime timePublish;
+    typeTime timeoutConfidenceSubscription;
+    typeTime timeoutCalibrationSubscription;
+    typeTime timeButton;
 
     // 0 -> open, 100 -> touching sill, 200 -> closed gaps
-    float percentage_closed;
-    float percentage_closed_published;
+    float percentageClosed;
+    float percentageClosedPublished;
 
-    stState state_published;
-    stMovementState movement_state_published;
+    stState statePublished;
+    stMovementState stateMovementPublished;
 
-    bool is_confident;
+    bool isConfident;
 
     bool calibrationMode;
-    typeTime calibration_timeout;
+    typeTime calibrationTimeout;
     int calibrationState;
     stTimings calibrationTimings;
     typeTime calibrationCache;

@@ -3,28 +3,29 @@
 
 #define BUTTON_DEBOUNCE_TIME (10)
 
-Shutter::Shutter(stPins Pins, stTimings Timings, String topic_base, PubSubClient* client)
+Shutter::Shutter(stPins Pins, stTimings Timings, String topicBase,
+    PubSubClient* client)
 {
   this->Pins = Pins;
   this->Timings = Timings;
-  this->topic_base = topic_base;
+  this->topicBase = topicBase;
   this->mqttClient = client;
 }
 
 void Shutter::callback(String topic, String payload)
 {
-  if (this->confidence_subscription_timeout && topic == (this->topic_base + SHUTTER_TOPIC_POSITION_PUBLISH_DETAILED))
+  if (this->timeoutConfidenceSubscription && topic == (this->topicBase + SHUTTER_TOPIC_POSITION_PUBLISH_DETAILED))
   {
-    this->movement_state = mvSTOPPED;
-    this->percentage_closed = payload.toFloat();
+    this->stateMovement = mvSTOPPED;
+    this->percentageClosed = payload.toFloat();
     mqttClient->unsubscribe(topic.c_str());
-    this->confidence_subscription_timeout = 0;
-    this->is_confident = true;
+    this->timeoutConfidenceSubscription = 0;
+    this->isConfident = true;
     return;
   }
-  if (topic.startsWith(this->topic_base))
+  if (topic.startsWith(this->topicBase))
   {
-    topic = topic.substring(this->topic_base.length());
+    topic = topic.substring(this->topicBase.length());
     if (!this->calibrationMode)
     {
       if (topic == SHUTTER_TOPIC_COMMAND)
@@ -64,18 +65,18 @@ void Shutter::callback(String topic, String payload)
 
 void Shutter::setupMQTT()
 {
-  String tempTopic = this->topic_base + SHUTTER_TOPIC_POSITION_COMMAND;
+  String tempTopic = this->topicBase + SHUTTER_TOPIC_POSITION_COMMAND;
   mqttClient->subscribe(tempTopic.c_str());
-  tempTopic = this->topic_base + SHUTTER_TOPIC_COMMAND;
+  tempTopic = this->topicBase + SHUTTER_TOPIC_COMMAND;
   mqttClient->subscribe(tempTopic.c_str());
-  if (!this->is_confident)
+  if (!this->isConfident)
   {
-    tempTopic = this->topic_base + SHUTTER_TOPIC_POSITION_PUBLISH_DETAILED;
+    tempTopic = this->topicBase + SHUTTER_TOPIC_POSITION_PUBLISH_DETAILED;
     mqttClient->subscribe(tempTopic.c_str());
-    this->confidence_subscription_timeout = millis() + SHUTTER_MQTT_SUBSCRIPTION_RETAIN_TIMEOUT;
+    this->timeoutConfidenceSubscription = millis() + SHUTTER_MQTT_SUBSCRIPTION_RETAIN_TIMEOUT;
   }
-  this->calibration_subscription_timeout = millis() + SHUTTER_MQTT_SUBSCRIPTION_RETAIN_TIMEOUT;
-  tempTopic = this->topic_base + SHUTTER_TOPIC_CONFIG;
+  this->timeoutCalibrationSubscription = millis() + SHUTTER_MQTT_SUBSCRIPTION_RETAIN_TIMEOUT;
+  tempTopic = this->topicBase + SHUTTER_TOPIC_CONFIG;
   String payload = this->Timings.toString();
   mqttClient->publish(tempTopic.c_str(), payload.c_str(), true);
 }
@@ -157,20 +158,20 @@ void Shutter::handleInput()
 
 void Shutter::setup()
 {
-  this->percentage_closed = NAN;
-  this->is_confident = false;
-  this->queued_target_value = -1.0f;
-  this->movement_state = stMovementState::mvSTOPPED;
-  this->percentage_closed_published = -1.0f;
-  this->state_published = UNDEFINED;
+  this->percentageClosed = NAN;
+  this->isConfident = false;
+  this->targetValueQueued = -1.0f;
+  this->stateMovement = stMovementState::mvSTOPPED;
+  this->percentageClosedPublished = -1.0f;
+  this->statePublished = UNDEFINED;
 
-  this->actuation_time = 0;
-  this->publish_time = 0;
-  this->confidence_subscription_timeout = 0;
-  this->button_time = 0;
+  this->timeActuation = 0;
+  this->timePublish = 0;
+  this->timeoutConfidenceSubscription = 0;
+  this->timeButton = 0;
 
-  this->calibration_subscription_timeout = 0;
-  this->calibration_timeout = 0;
+  this->timeoutCalibrationSubscription = 0;
+  this->calibrationTimeout = 0;
   this->calibrationMode = false;
   this->calibrationState = 0;
 
@@ -188,18 +189,18 @@ void Shutter::setup()
 
 void Shutter::loop()
 {
-  if (this->confidence_subscription_timeout && millis() > this->confidence_subscription_timeout)
+  if (this->timeoutConfidenceSubscription && millis() > this->timeoutConfidenceSubscription)
   {
     // no data recoverable from MQTT Broker (timed out) -> confidence only gainable by opening fully
-    String tempTopic = this->topic_base + SHUTTER_TOPIC_POSITION_PUBLISH_DETAILED;
+    String tempTopic = this->topicBase + SHUTTER_TOPIC_POSITION_PUBLISH_DETAILED;
     mqttClient->unsubscribe(tempTopic.c_str());
-    this->confidence_subscription_timeout = 0;
+    this->timeoutConfidenceSubscription = 0;
   }
-  if (this->calibration_subscription_timeout && millis() > this->calibration_subscription_timeout)
+  if (this->timeoutCalibrationSubscription && millis() > this->timeoutCalibrationSubscription)
   {
-    String tempTopic = this->topic_base + SHUTTER_TOPIC_CALIBRATE_COMMAND;
+    String tempTopic = this->topicBase + SHUTTER_TOPIC_CALIBRATE_COMMAND;
     mqttClient->subscribe(tempTopic.c_str());
-    this->calibration_subscription_timeout = 0;
+    this->timeoutCalibrationSubscription = 0;
   }
   this->handleInput();
   if (!this->calibrationMode)
@@ -215,15 +216,15 @@ void Shutter::loop()
 void Shutter::actuation(float targetValue)
 {
   targetValue = clampPercentage(targetValue);
-  if (this->movement_state == mvSTOPPED)
+  if (this->stateMovement == mvSTOPPED)
   {
-    if (equalWithEps(this->percentage_closed - targetValue))
+    if (equalWithEps(this->percentageClosed - targetValue))
     {
       return;
     }
     typeDeltaTime t0, t1, duration, extra = 0;
     stMovementState nextMove;
-    if (this->percentage_closed > targetValue)
+    if (this->percentageClosed > targetValue)
     {
       // OPEN
       nextMove = mvOPENING;
@@ -234,14 +235,14 @@ void Shutter::actuation(float targetValue)
       // CLOSE
       nextMove = mvCLOSING;
     }
-    t0 = this->getRelativeTime(this->percentage_closed, nextMove);
+    t0 = this->getRelativeTime(this->percentageClosed, nextMove);
     t1 = this->getRelativeTime(targetValue, nextMove);
     duration = t1 - t0 + extra;
     this->actuationRaw(nextMove, duration);
   }
   else
   {
-    this->queued_target_value = targetValue;
+    this->targetValueQueued = targetValue;
   }
   
 }
@@ -250,20 +251,20 @@ void Shutter::actuationRaw(stMovementState toMove, typeDeltaTime duration)
 {
   if (toMove == mvSTOPPED)
   {
-    this->actuation_time = millis();
+    this->timeActuation = millis();
     this->actuationLoop();
   }
   else
   {
-    this->movement_state = toMove;
+    this->stateMovement = toMove;
     typeTime time = this->updateOutput();
     this->calcBase.state = toMove;
     this->calcBase.startTime = time;
     this->calcBase.t0 = 0;
     this->calcBase.endTime = time + duration;
-    this->actuation_time = this->calcBase.endTime;
-    this->calcBase.startPercentage = this->percentage_closed;
-    this->publish_time = time;
+    this->timeActuation = this->calcBase.endTime;
+    this->calcBase.startPercentage = this->percentageClosed;
+    this->timePublish = time;
     this->publishAll(true);
   }  
 }
@@ -271,44 +272,44 @@ void Shutter::actuationRaw(stMovementState toMove, typeDeltaTime duration)
 void Shutter::actuationLoop()
 {
   typeTime time = millis();
-  if (this->actuation_time)
+  if (this->timeActuation)
   {
-    this->percentage_closed = this->getIntermediatePercentage(time);
-    if (time >= this->actuation_time)
+    this->percentageClosed = this->getIntermediatePercentage(time);
+    if (time >= this->timeActuation)
     {
-      if (this->movement_state != mvSTOPPED)
+      if (this->stateMovement != mvSTOPPED)
       {
-        this->movement_state = mvSTOPPED;
+        this->stateMovement = mvSTOPPED;
         time = this->updateOutput();
-        this->percentage_closed = this->getIntermediatePercentage(time);
-        this->publish_time = 0;
+        this->percentageClosed = this->getIntermediatePercentage(time);
+        this->timePublish = 0;
         this->publishAll(true);
-        if (this->queued_target_value != -1.0f)
+        if (this->targetValueQueued != -1.0f)
         {
           // 500ms delay before queued value is executed
-          this->actuation_time = time + 500;
+          this->timeActuation = time + 500;
         }
         else
         {
-          this->actuation_time = 0;
+          this->timeActuation = 0;
         }
       }
-      else if (this->queued_target_value != -1.0f)
+      else if (this->targetValueQueued != -1.0f)
       {
-        this->actuation(this->queued_target_value);
-        this->queued_target_value = -1.0f;
+        this->actuation(this->targetValueQueued);
+        this->targetValueQueued = -1.0f;
       }
       else
       {
-        this->actuation_time = 0;
+        this->timeActuation = 0;
       }
     }
     else
     {
-      if(this->publish_time && time >= this->publish_time)
+      if(this->timePublish && time >= this->timePublish)
       {
         this->publishAll(false);
-        this->publish_time += SHUTTER_PUBLISH_INTERVAL;
+        this->timePublish += SHUTTER_PUBLISH_INTERVAL;
       }
     }
   }
@@ -321,7 +322,7 @@ void Shutter::calibrate()
 
 typeTime Shutter::updateOutput()
 {
-  switch(this->movement_state)
+  switch(this->stateMovement)
   {
     case mvSTOPPED:
       digitalWrite(Pins.actuator.down, RELAIS_LOW);
@@ -467,21 +468,21 @@ void Shutter::ButtonUpwardsPressed()
 {
   if (!this->calibrationMode)
   {
-    if (this->movement_state == mvCLOSING)
+    if (this->stateMovement == mvCLOSING)
     {
       this->actuationRaw(stMovementState::mvSTOPPED, 0);
     }
-    else if (this->movement_state == mvSTOPPED)
+    else if (this->stateMovement == mvSTOPPED)
     {
       this->setTarget(0.0f);
-      this->button_time = millis() + SHUTTER_TIMEOUT_BUTTON;
+      this->timeButton = millis() + SHUTTER_TIMEOUT_BUTTON;
     }
   }
   else
   {
     if (this->calibrationState != 1)
     {
-      this->movement_state = mvOPENING;
+      this->stateMovement = mvOPENING;
       this->calibrationCache = this->updateOutput();
     }
   }
@@ -491,17 +492,17 @@ void Shutter::ButtonUpwardsReleased()
 {
   if (!this->calibrationMode)
   {
-    if (this->button_time && millis() > this->button_time)
+    if (this->timeButton && millis() > this->timeButton)
     {
       this->actuationRaw(stMovementState::mvSTOPPED, 0);
     }
-    this->button_time = 0;
+    this->timeButton = 0;
   }
   else
   {
     if (this->calibrationState != 1)
     {
-      this->movement_state = mvSTOPPED;
+      this->stateMovement = mvSTOPPED;
       typeTime tmptime = this->updateOutput();
       if (tmptime - this->calibrationCache < 20) { return; }
       if (this->calibrationState == 2)
@@ -525,21 +526,21 @@ void Shutter::ButtonDownwardsPressed()
 {
   if (!this->calibrationMode)
   {
-    if (this->movement_state == mvOPENING)
+    if (this->stateMovement == mvOPENING)
     {
       this->actuationRaw(stMovementState::mvSTOPPED, 0);
     }
-    else if (this->movement_state == mvSTOPPED)
+    else if (this->stateMovement == mvSTOPPED)
     {
       this->setTarget(SHUTTER_PAYLOAD_COMMAND_CLOSE_TARGET);
-      this->button_time = millis() + SHUTTER_TIMEOUT_BUTTON;
+      this->timeButton = millis() + SHUTTER_TIMEOUT_BUTTON;
     }
   }
   else
   {
     if (this->calibrationState <= 1)
     {
-      this->movement_state = mvCLOSING;
+      this->stateMovement = mvCLOSING;
       this->calibrationCache = this->updateOutput();
     }
   }
@@ -549,17 +550,17 @@ void Shutter::ButtonDownwardsReleased()
 {
   if (!this->calibrationMode)
   {
-    if (this->button_time && millis() > this->button_time)
+    if (this->timeButton && millis() > this->timeButton)
     {
       this->actuationRaw(stMovementState::mvSTOPPED, 0);
     }
-    this->button_time = 0;
+    this->timeButton = 0;
   }
   else
   {
     if (this->calibrationState <= 1)
     {
-      this->movement_state = mvSTOPPED;
+      this->stateMovement = mvSTOPPED;
       typeTime tmptime = this->updateOutput();
       if (tmptime - this->calibrationCache < 20) { return; }
       if (this->calibrationState == 0)
@@ -581,18 +582,18 @@ void Shutter::ButtonDownwardsReleased()
 void Shutter::setTarget(float targetValue)
 {
   targetValue = clampPercentage(targetValue);
-  if (!this->is_confident)
+  if (!this->isConfident)
   {
     if (equalWithEps(targetValue))
     {
-      this->queued_target_value = -1.0f;
+      this->targetValueQueued = -1.0f;
     }
     else
     {
-      this->queued_target_value = targetValue;
+      this->targetValueQueued = targetValue;
     }
     this->calibrate();
-    this->is_confident = true;
+    this->isConfident = true;
   }
   else
   {
@@ -602,18 +603,18 @@ void Shutter::setTarget(float targetValue)
 
 Shutter::stMovementState Shutter::getMovementState() const
 {
-  return this->movement_state;
+  return this->stateMovement;
 }
 
 Shutter::stState Shutter::getState() const
 {
-  if (this->movement_state == mvSTOPPED)
+  if (this->stateMovement == mvSTOPPED)
   {
-    if (!this->is_confident)
+    if (!this->isConfident)
     {
       return stState::UNDEFINED;
     }
-    else if (this->percentage_closed < SHUTTER_PAYLOAD_STATE_THRESHOLD)
+    else if (this->percentageClosed < SHUTTER_PAYLOAD_STATE_THRESHOLD)
     {
       return stState::OPEN;
     }
@@ -622,11 +623,11 @@ Shutter::stState Shutter::getState() const
       return stState::CLOSED;
     }
   }
-  else if (this->movement_state == mvOPENING)
+  else if (this->stateMovement == mvOPENING)
   {
     return stState::OPENING;
   }
-  else if (this->movement_state == mvCLOSING)
+  else if (this->stateMovement == mvCLOSING)
   {
     return stState::CLOSING;
   }
@@ -647,7 +648,7 @@ void Shutter::publishState(bool checkConnectivity, bool forcePublish)
   if (!checkConnectivity || this->mqttClient->connected())
   {
     stState tempState = this->getState();
-    if (forcePublish || tempState != this->state_published)
+    if (forcePublish || tempState != this->statePublished)
     {
       String payload = "";
       bool retain = true;
@@ -676,15 +677,15 @@ void Shutter::publishState(bool checkConnectivity, bool forcePublish)
         payload = "calibrating";
         retain = false;
       }
-      String topic = this->topic_base + SHUTTER_TOPIC_STATE_PUBLISH;
+      String topic = this->topicBase + SHUTTER_TOPIC_STATE_PUBLISH;
       this->mqttClient->publish(topic.c_str(), payload.c_str(), retain);
-      this->state_published = tempState;
+      this->statePublished = tempState;
     }
-    if (forcePublish || this->movement_state != this->movement_state_published)
+    if (forcePublish || this->stateMovement != this->stateMovementPublished)
     {
       String payload = "";
       bool retain = true;
-      switch (this->movement_state)
+      switch (this->stateMovement)
       {
         case mvSTOPPED:
           payload = SHUTTER_PAYLOAD_STATE_STOPPED;
@@ -698,9 +699,9 @@ void Shutter::publishState(bool checkConnectivity, bool forcePublish)
           retain = false;
           break;
       }
-      String topic = this->topic_base + SHUTTER_TOPIC_MVSTATE_PUBLISH;
+      String topic = this->topicBase + SHUTTER_TOPIC_MVSTATE_PUBLISH;
       this->mqttClient->publish(topic.c_str(), payload.c_str(), retain);
-      this->movement_state_published = this->movement_state;
+      this->stateMovementPublished = this->stateMovement;
     }
   }
 }
@@ -708,7 +709,7 @@ void Shutter::publishState(bool checkConnectivity, bool forcePublish)
 void Shutter::calibrationLoop()
 {
   typeTime time = millis();
-  if (this->calibration_timeout && time > this->calibration_timeout)
+  if (this->calibrationTimeout && time > this->calibrationTimeout)
   {
     this->calibrationAbort();
   }
@@ -717,8 +718,8 @@ void Shutter::calibrationLoop()
 void Shutter::calibrationInit()
 {
   this->calibrationMode = true;
-  this->calibration_timeout = millis() + SHUTTER_CALIBRATION_TIMEOUT;
-  this->movement_state = mvSTOPPED;
+  this->calibrationTimeout = millis() + SHUTTER_CALIBRATION_TIMEOUT;
+  this->stateMovement = mvSTOPPED;
   this->updateOutput();
   this->calibrationState = 0;
   this->calibrationCache = 0;
@@ -729,8 +730,8 @@ void Shutter::calibrationInit()
 void Shutter::calibrationAbort()
 {
   this->calibrationMode = false;
-  this->calibration_timeout = 0;
-  this->movement_state = mvSTOPPED;
+  this->calibrationTimeout = 0;
+  this->stateMovement = mvSTOPPED;
   this->updateOutput();
   this->calibrationPublish();
   this->publishState(true, true);
@@ -738,12 +739,12 @@ void Shutter::calibrationAbort()
 
 void Shutter::calibrationPublish(bool publishFinal)
 {
-  String tempTopic = this->topic_base + SHUTTER_TOPIC_CALIBRATE_PUBLISH_INTERMEDIATE;
+  String tempTopic = this->topicBase + SHUTTER_TOPIC_CALIBRATE_PUBLISH_INTERMEDIATE;
   String payload = this->calibrationTimings.toString();
   this->mqttClient->publish(tempTopic.c_str(), payload.c_str(), false);
   if (publishFinal)
   {
-    tempTopic = this->topic_base + SHUTTER_TOPIC_CALIBRATE_PUBLISH;
+    tempTopic = this->topicBase + SHUTTER_TOPIC_CALIBRATE_PUBLISH;
     this->mqttClient->publish(tempTopic.c_str(), payload.c_str(), false);
   }
 }
@@ -752,20 +753,20 @@ void Shutter::publishValue(bool checkConnectivity, bool forcePublish)
 {
   if (!checkConnectivity || this->mqttClient->connected())
   {
-    if (forcePublish || this->percentage_closed_published < 0.0f || ! equalWithEps(this->percentage_closed - this->percentage_closed_published))
+    if (forcePublish || this->percentageClosedPublished < 0.0f || ! equalWithEps(this->percentageClosed - this->percentageClosedPublished))
     {
       char payload[10];
-      bool retain = (this->movement_state == mvSTOPPED);
+      bool retain = (this->stateMovement == mvSTOPPED);
 
-      String topic = this->topic_base + SHUTTER_TOPIC_POSITION_PUBLISH;
-      snprintf(payload, 10, "%.0f", min(this->percentage_closed, 100.0f));
+      String topic = this->topicBase + SHUTTER_TOPIC_POSITION_PUBLISH;
+      snprintf(payload, 10, "%.0f", min(this->percentageClosed, 100.0f));
       this->mqttClient->publish(topic.c_str(), payload, retain);
 
-      snprintf(payload, 10, "%.0f", this->percentage_closed);
-      topic = this->topic_base + SHUTTER_TOPIC_POSITION_PUBLISH_DETAILED;
+      snprintf(payload, 10, "%.0f", this->percentageClosed);
+      topic = this->topicBase + SHUTTER_TOPIC_POSITION_PUBLISH_DETAILED;
       this->mqttClient->publish(topic.c_str(), payload, retain);
 
-      this->percentage_closed_published = this->percentage_closed;
+      this->percentageClosedPublished = this->percentageClosed;
     }
   }
 }
