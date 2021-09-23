@@ -1,14 +1,15 @@
 #include "Shutter.h"
 #include "math.h"
 
-#define BUTTON_DEBOUNCE_TIME (10)
-
 Shutter::Shutter(stPins Pins, stTimings Timings, String topicBase,
-    PubSubClient* client)
+    PubSubClient* client, float motorValueMax = SHUTTER_MOTOR_SHUTOFF_DEFAULT)
 {
   this->Pins = Pins;
   this->Timings = Timings;
   this->topicBase = topicBase;
+  this->motorValueMax = motorValueMax;
+  this->motorValueMax = max(105.0f, this->motorValueMax);
+  this->motorValueMax = min(200.0f, this->motorValueMax);
   this->mqttClient = client;
 }
 
@@ -374,11 +375,11 @@ float Shutter::getPercentage(typeDeltaTime trel, stMovementState movement, float
     case mvOPENING:
       if (trel == 0)
       {
-        return 200.0f;
+        return this->motorValueMax;
       }
       if (trel < this->Timings.full_opening)
       {
-        return 200.0f - ((trel * 100.0f) / this->Timings.full_opening);
+        return this->motorValueMax - ((trel * 100.0f) / this->Timings.full_opening);
       }
       if (trel == this->Timings.full_opening)
       {
@@ -407,9 +408,9 @@ float Shutter::getPercentage(typeDeltaTime trel, stMovementState movement, float
       trel -= this->Timings.closing;
       if (trel < this->Timings.full_closing)
       {
-        return 100.0f + ((trel * 100.0f) / this->Timings.full_closing);
+        return 100.0f + ((trel * (this->motorValueMax - 100.0f)) / this->Timings.full_closing);
       }
-      return 200.0f;
+      return this->motorValueMax;
       break;
     default:
       return fallback;
@@ -434,11 +435,15 @@ typeDeltaTime Shutter::getRelativeTime(float percentage, stMovementState movemen
       {
         return (unsigned int)(this->Timings.full_opening + ((this->Timings.opening * (100.0f - percentage)) / 100.0f));
       }
-      if (equalWithEps(percentage - 200.0f))
+      if (equalWithEps(percentage - this->motorValueMax))
       {
         return 0;
       }
-      return (unsigned int)((this->Timings.full_opening * (200.0f - percentage)) / 100.0f);
+      if (percentage < this->motorValueMax)
+      {
+        return (unsigned int)((this->Timings.full_opening * (this->motorValueMax - percentage)) / (this-> motorValueMax - 100.0f));
+      }
+      return 0;
       break;
     case mvCLOSING:
       if (equalWithEps(percentage - 0.0f))
@@ -453,11 +458,15 @@ typeDeltaTime Shutter::getRelativeTime(float percentage, stMovementState movemen
       {
         return (unsigned int)((this->Timings.closing * percentage) / 100.0f);
       }
-      if (equalWithEps(percentage - 200.0f))
+      if (equalWithEps(percentage - this->motorValueMax))
       {
         return this->Timings.closing + this->Timings.full_closing;
       }
-      return (unsigned int)(this->Timings.closing + (this->Timings.full_closing * (percentage - 100.0f) / 100.0f));
+      if (percentage < this->motorValueMax)
+      {
+        return (unsigned int)(this->Timings.closing + (this->Timings.full_closing * (percentage - 100.0f) / (this->motorValueMax - 100.0f)));
+      }
+      return this->Timings.closing + this->Timings.full_closing;
       break;
     default:
       return 0;
@@ -778,7 +787,7 @@ bool Shutter::equalWithEps(float value)
 
 float Shutter::clampPercentage(float value)
 {
-  value = min(value, 200.0f);
+  value = min(value, this->motorValueMax);
   value = max(value, 0.0f);
   return value;
 }

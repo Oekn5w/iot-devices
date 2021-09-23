@@ -67,7 +67,7 @@ class Shutter
     };
 
     Shutter(stPins Pins, stTimings Timings, String topicBase,
-        PubSubClient* client);
+        PubSubClient* client, float motorValueMax);
 
     void callback(String topic, String payload);
     void setupMQTT();
@@ -85,6 +85,7 @@ class Shutter
     stPins Pins;
     stTimings Timings;
     String topicBase;
+    float motorValueMax;
     PubSubClient* mqttClient;
 
     // saving for interrupt handling

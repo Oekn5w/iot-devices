@@ -8,6 +8,7 @@
 #define RELAIS_LOW (0)
 #define RELAIS_HIGH (1)
 #define BUTTON_ACTIVE_LOW (1)
+#define BUTTON_DEBOUNCE_TIME (10)
 
 #define SHUTTER_TOPIC_STATE_PUBLISH "/state/current"
 #define SHUTTER_TOPIC_MVSTATE_PUBLISH "/state/movement"
@@ -19,6 +20,7 @@
 #define SHUTTER_PAYLOAD_STATE_STOPPED "stopped"
 // 0 -> open, 100 -> touching sill, 200 -> closed gaps
 #define SHUTTER_PAYLOAD_STATE_THRESHOLD (90)
+#define SHUTTER_MOTOR_SHUTOFF_DEFAULT (200.0f)
 
 #define SHUTTER_TOPIC_POSITION_COMMAND "/position/target"
 #define SHUTTER_TOPIC_POSITION_PUBLISH "/position/current"

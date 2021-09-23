@@ -15,6 +15,7 @@
 #define SHUTTER_TIME_1_2 (3000)
 #define SHUTTER_TIME_1_0 (6000)
 #define SHUTTER_TIME_2_1 (3000)
+#define SHUTTER_VALUE_MOTOR_OFF (200)
 #elif SHUTTER_SINGLE_ID == 1
 #define MQTT_CLIENT_ID "ESP8266-Shutter-ID1"
 #define BASE_TOPIC_BOARD "shutter/boards/single/1"
@@ -27,6 +28,7 @@
 #define SHUTTER_TIME_1_2 (3000)
 #define SHUTTER_TIME_1_0 (6000)
 #define SHUTTER_TIME_2_1 (3000)
+#define SHUTTER_VALUE_MOTOR_OFF (200)
 #elif SHUTTER_SINGLE_ID == 2
 #define MQTT_CLIENT_ID "ESP8266-Shutter-ID2"
 #define BASE_TOPIC_BOARD "shutter/boards/single/2"
@@ -39,6 +41,7 @@
 #define SHUTTER_TIME_1_2 (3000)
 #define SHUTTER_TIME_1_0 (6000)
 #define SHUTTER_TIME_2_1 (3000)
+#define SHUTTER_VALUE_MOTOR_OFF (200)
 #elif SHUTTER_SINGLE_ID == 3
 #define MQTT_CLIENT_ID "ESP8266-Shutter-ID3"
 #define BASE_TOPIC_BOARD "shutter/boards/single/3"
@@ -51,6 +54,7 @@
 #define SHUTTER_TIME_1_2 (3000)
 #define SHUTTER_TIME_1_0 (6000)
 #define SHUTTER_TIME_2_1 (3000)
+#define SHUTTER_VALUE_MOTOR_OFF (200)
 #endif
 
 #define TOPIC_RELAIS_TEMP (BASE_TOPIC_SHUTTER "/temperature")
