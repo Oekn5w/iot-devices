@@ -34,6 +34,12 @@ class Shutter
       OPEN
     };
 
+    enum stShutterMode {
+      modeNORMAL,
+      modeCALIBRATING,
+      modeDIRECT
+    };
+
     struct stCalcBase {
       stMovementState state;
       typeTime startTime;
@@ -101,7 +107,7 @@ class Shutter
     typeTime timeActuation;
     typeTime timePublish;
     typeTime timeoutConfidenceSubscription;
-    typeTime timeoutCalibrationSubscription;
+    typeTime timeoutModeSubscription;
     typeTime timeButton;
 
     // 0 -> open, 100 -> touching sill, 200 -> closed gaps
@@ -113,20 +119,22 @@ class Shutter
 
     bool isConfident;
 
-    bool calibrationMode;
-    typeTime calibrationTimeout;
+    stShutterMode mode;
+    typeTime modeTimeout;
+
     int calibrationState;
     stTimings calibrationTimings;
     typeTime calibrationCache;
-    void calibrationLoop();
-    void calibrationAbort();
-    void calibrationInit();
     void calibrationPublish(bool publishFinal = false);
 
     void actuation(float targetValue);
     void actuationRaw(stMovementState toMove, typeDeltaTime duration);
     void actuationLoop();
     typeTime updateOutput();
+
+    void setModeNormal();
+    void setModeDirect();
+    void setModeCalibration();
 
     void ButtonUpwardsPressed();
     void ButtonUpwardsReleased();

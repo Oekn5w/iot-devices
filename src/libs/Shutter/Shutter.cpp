@@ -27,7 +27,7 @@ void Shutter::callback(String topic, String payload)
   if (topic.startsWith(this->topicBase))
   {
     topic = topic.substring(this->topicBase.length());
-    if (!this->calibrationMode)
+    if (this->mode == modeNORMAL)
     {
       if (topic == SHUTTER_TOPIC_COMMAND)
       {
@@ -49,16 +49,20 @@ void Shutter::callback(String topic, String payload)
         float target = payload.toFloat();
         this->setTarget(target);
       }
-      else if (topic == SHUTTER_TOPIC_CALIBRATE_COMMAND && payload == SHUTTER_PAYLOAD_CALIBRATE_START)
-      {
-        this->calibrationInit();
-      }
     }
-    else
+    if (topic == SHUTTER_TOPIC_MODE_COMMAND)
     {
-      if (topic == SHUTTER_TOPIC_CALIBRATE_COMMAND && payload == SHUTTER_PAYLOAD_CALIBRATE_ABORT)
+      if (payload == SHUTTER_PAYLOAD_MODE_NORMAL)
       {
-        this->calibrationAbort();
+        this->setModeNormal();
+      }
+      else if (payload == SHUTTER_PAYLOAD_MODE_CALIBRATE)
+      {
+        this->setModeCalibration();
+      }
+      else if (payload == SHUTTER_PAYLOAD_MODE_DIRECT)
+      {
+        this->setModeDirect();
       }
     }
   }
@@ -76,7 +80,7 @@ void Shutter::setupMQTT()
     mqttClient->subscribe(tempTopic.c_str());
     this->timeoutConfidenceSubscription = millis() + SHUTTER_MQTT_SUBSCRIPTION_RETAIN_TIMEOUT;
   }
-  this->timeoutCalibrationSubscription = millis() + SHUTTER_MQTT_SUBSCRIPTION_RETAIN_TIMEOUT;
+  this->timeoutModeSubscription = millis() + SHUTTER_MQTT_SUBSCRIPTION_RETAIN_TIMEOUT;
   tempTopic = this->topicBase + SHUTTER_TOPIC_CONFIG;
   String payload = this->Timings.toString();
   mqttClient->publish(tempTopic.c_str(), payload.c_str(), true);
@@ -163,6 +167,8 @@ void Shutter::setup()
   this->isConfident = false;
   this->targetValueQueued = -1.0f;
   this->stateMovement = stMovementState::mvSTOPPED;
+  this->mode = modeNORMAL;
+  this->modeTimeout = 0;
   this->percentageClosedPublished = -1.0f;
   this->statePublished = UNDEFINED;
 
@@ -171,9 +177,7 @@ void Shutter::setup()
   this->timeoutConfidenceSubscription = 0;
   this->timeButton = 0;
 
-  this->timeoutCalibrationSubscription = 0;
-  this->calibrationTimeout = 0;
-  this->calibrationMode = false;
+  this->timeoutModeSubscription = 0;
   this->calibrationState = 0;
 
   digitalWrite(Pins.actuator.down, RELAIS_LOW);
@@ -197,20 +201,21 @@ void Shutter::loop()
     mqttClient->unsubscribe(tempTopic.c_str());
     this->timeoutConfidenceSubscription = 0;
   }
-  if (this->timeoutCalibrationSubscription && millis() > this->timeoutCalibrationSubscription)
+  if (this->timeoutModeSubscription && millis() > this->timeoutModeSubscription)
   {
-    String tempTopic = this->topicBase + SHUTTER_TOPIC_CALIBRATE_COMMAND;
+    String tempTopic = this->topicBase + SHUTTER_TOPIC_MODE_COMMAND;
     mqttClient->subscribe(tempTopic.c_str());
-    this->timeoutCalibrationSubscription = 0;
+    this->timeoutModeSubscription = 0;
   }
   this->handleInput();
-  if (!this->calibrationMode)
+  if (this->modeTimeout && millis() > this->modeTimeout)
+  {
+    this->setModeNormal();
+    this->modeTimeout = 0;
+  }
+  if (this->mode == modeNORMAL)
   {
     this->actuationLoop();
-  }
-  else
-  {
-    this->calibrationLoop();
   }
 }
 
@@ -475,116 +480,122 @@ typeDeltaTime Shutter::getRelativeTime(float percentage, stMovementState movemen
 
 void Shutter::ButtonUpwardsPressed()
 {
-  if (!this->calibrationMode)
+  switch(this->mode)
   {
-    if (this->stateMovement == mvCLOSING)
-    {
-      this->actuationRaw(stMovementState::mvSTOPPED, 0);
-    }
-    else if (this->stateMovement == mvSTOPPED)
-    {
+    case modeNORMAL:
       this->setTarget(0.0f);
       this->timeButton = millis() + SHUTTER_TIMEOUT_BUTTON;
-    }
-  }
-  else
-  {
-    if (this->calibrationState != 1)
-    {
+      break;
+    case modeCALIBRATING:
+      if (this->calibrationState != 1)
+      {
+        this->stateMovement = mvOPENING;
+        this->calibrationCache = this->updateOutput();
+      }
+      break;
+    case modeDIRECT:
       this->stateMovement = mvOPENING;
-      this->calibrationCache = this->updateOutput();
-    }
+      this->updateOutput();
+      break;
   }
 }
 
 void Shutter::ButtonUpwardsReleased()
 {
-  if (!this->calibrationMode)
+  switch(this->mode)
   {
-    if (this->timeButton && millis() > this->timeButton)
-    {
-      this->actuationRaw(stMovementState::mvSTOPPED, 0);
-    }
-    this->timeButton = 0;
-  }
-  else
-  {
-    if (this->calibrationState != 1)
-    {
+    case modeNORMAL:
+      if (this->timeButton && millis() > this->timeButton)
+      {
+        this->actuationRaw(stMovementState::mvSTOPPED, 0);
+      }
+      this->timeButton = 0;
+      break;
+    case modeCALIBRATING:
+      if (this->calibrationState != 1)
+      {
+        this->stateMovement = mvSTOPPED;
+        typeTime tmptime = this->updateOutput();
+        if (tmptime - this->calibrationCache < 20) { return; }
+        if (this->calibrationState == 2)
+        {
+          this->calibrationTimings.full_opening = tmptime - this->calibrationCache;
+          this->calibrationPublish();
+          this->calibrationState = 3;
+        }
+        else if (this->calibrationState == 3)
+        {
+          this->calibrationTimings.opening = tmptime - this->calibrationCache;
+          this->calibrationPublish(true);
+          this->calibrationTimings = {0, 0, 0, 0};
+          this->calibrationState = 0;
+        }
+      }
+      break;
+    case modeDIRECT:
       this->stateMovement = mvSTOPPED;
-      typeTime tmptime = this->updateOutput();
-      if (tmptime - this->calibrationCache < 20) { return; }
-      if (this->calibrationState == 2)
-      {
-        this->calibrationTimings.full_opening = tmptime - this->calibrationCache;
-        this->calibrationPublish();
-        this->calibrationState = 3;
-      }
-      else if (this->calibrationState == 3)
-      {
-        this->calibrationTimings.opening = tmptime - this->calibrationCache;
-        this->calibrationPublish(true);
-        this->calibrationTimings = {0, 0, 0, 0};
-        this->calibrationState = 0;
-      }
-    }
+      this->updateOutput();
+      break;
   }
 }
 
 void Shutter::ButtonDownwardsPressed()
 {
-  if (!this->calibrationMode)
+  switch(this->mode)
   {
-    if (this->stateMovement == mvOPENING)
-    {
-      this->actuationRaw(stMovementState::mvSTOPPED, 0);
-    }
-    else if (this->stateMovement == mvSTOPPED)
-    {
+    case modeNORMAL:
       this->setTarget(SHUTTER_PAYLOAD_COMMAND_CLOSE_TARGET);
       this->timeButton = millis() + SHUTTER_TIMEOUT_BUTTON;
-    }
-  }
-  else
-  {
-    if (this->calibrationState <= 1)
-    {
+      break;
+    case modeCALIBRATING:
+      if (this->calibrationState <= 1)
+      {
+        this->stateMovement = mvCLOSING;
+        this->calibrationCache = this->updateOutput();
+      }
+      break;
+    case modeDIRECT:
       this->stateMovement = mvCLOSING;
-      this->calibrationCache = this->updateOutput();
-    }
+      this->updateOutput();
+      break;
   }
 }
 
 void Shutter::ButtonDownwardsReleased()
 {
-  if (!this->calibrationMode)
+  switch(this->mode)
   {
-    if (this->timeButton && millis() > this->timeButton)
-    {
-      this->actuationRaw(stMovementState::mvSTOPPED, 0);
-    }
-    this->timeButton = 0;
-  }
-  else
-  {
-    if (this->calibrationState <= 1)
-    {
+    case modeNORMAL:
+      if (this->timeButton && millis() > this->timeButton)
+      {
+        this->actuationRaw(stMovementState::mvSTOPPED, 0);
+      }
+      this->timeButton = 0;
+      break;
+    case modeCALIBRATING:
+      if (this->calibrationState <= 1)
+      {
+        this->stateMovement = mvSTOPPED;
+        typeTime tmptime = this->updateOutput();
+        if (tmptime - this->calibrationCache < 20) { return; }
+        if (this->calibrationState == 0)
+        {
+          this->calibrationTimings.closing = tmptime - this->calibrationCache;
+          this->calibrationPublish();
+          this->calibrationState = 1;
+        }
+        else if (this->calibrationState == 1)
+        {
+          this->calibrationTimings.full_closing = tmptime - this->calibrationCache;
+          this->calibrationPublish();
+          this->calibrationState = 2;
+        }
+      }
+      break;
+    case modeDIRECT:
       this->stateMovement = mvSTOPPED;
-      typeTime tmptime = this->updateOutput();
-      if (tmptime - this->calibrationCache < 20) { return; }
-      if (this->calibrationState == 0)
-      {
-        this->calibrationTimings.closing = tmptime - this->calibrationCache;
-        this->calibrationPublish();
-        this->calibrationState = 1;
-      }
-      else if (this->calibrationState == 1)
-      {
-        this->calibrationTimings.full_closing = tmptime - this->calibrationCache;
-        this->calibrationPublish();
-        this->calibrationState = 2;
-      }
-    }
+      this->updateOutput();
+      break;
   }
 }
 
@@ -681,9 +692,14 @@ void Shutter::publishState(bool checkConnectivity, bool forcePublish)
           payload = "undefined";
           break;
       }
-      if (this->calibrationMode)
+      if (this->mode == modeCALIBRATING)
       {
         payload = "calibrating";
+        retain = false;
+      }
+      if (this->mode == modeDIRECT)
+      {
+        payload = "direct";
         retain = false;
       }
       String topic = this->topicBase + SHUTTER_TOPIC_STATE_PUBLISH;
@@ -715,19 +731,14 @@ void Shutter::publishState(bool checkConnectivity, bool forcePublish)
   }
 }
 
-void Shutter::calibrationLoop()
+void Shutter::setModeCalibration()
 {
-  typeTime time = millis();
-  if (this->calibrationTimeout && time > this->calibrationTimeout)
+  if (this->mode == modeCALIBRATING)
   {
-    this->calibrationAbort();
+    return;
   }
-}
-
-void Shutter::calibrationInit()
-{
-  this->calibrationMode = true;
-  this->calibrationTimeout = millis() + SHUTTER_CALIBRATION_TIMEOUT;
+  this->mode = modeCALIBRATING;
+  this->modeTimeout = millis() + SHUTTER_MODE_TIMEOUT;
   this->stateMovement = mvSTOPPED;
   this->updateOutput();
   this->calibrationState = 0;
@@ -736,13 +747,33 @@ void Shutter::calibrationInit()
   this->publishState(true, true);
 }
 
-void Shutter::calibrationAbort()
+void Shutter::setModeDirect()
 {
-  this->calibrationMode = false;
-  this->calibrationTimeout = 0;
+  if (this->mode == modeDIRECT)
+  {
+    return;
+  }
+  this->mode = modeDIRECT;
+  this->modeTimeout = millis() + SHUTTER_MODE_TIMEOUT;
   this->stateMovement = mvSTOPPED;
   this->updateOutput();
-  this->calibrationPublish();
+  this->publishState(true, true);
+}
+
+void Shutter::setModeNormal()
+{
+  if (this->mode == modeNORMAL)
+  {
+    return;
+  }
+  if (this->mode == modeCALIBRATING)
+  {
+    this->calibrationPublish();
+  }
+  this->mode = modeNORMAL;
+  this->modeTimeout = 0;
+  this->stateMovement = mvSTOPPED;
+  this->updateOutput();
   this->publishState(true, true);
 }
 

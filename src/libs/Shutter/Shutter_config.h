@@ -26,12 +26,15 @@
 #define SHUTTER_TOPIC_POSITION_PUBLISH "/position/current"
 #define SHUTTER_TOPIC_POSITION_PUBLISH_DETAILED "/position/detailed"
 
-#define SHUTTER_TOPIC_CALIBRATE_COMMAND "/calibrate/command"
+#define SHUTTER_TOPIC_MODE_COMMAND "/mode/set"
+#define SHUTTER_PAYLOAD_MODE_CALIBRATE "calibrate"
+#define SHUTTER_PAYLOAD_MODE_NORMAL "normal"
+#define SHUTTER_PAYLOAD_MODE_DIRECT "direct"
+#define SHUTTER_MODE_TIMEOUT (600000)
+
 #define SHUTTER_TOPIC_CALIBRATE_PUBLISH "/calibrate/final"
 #define SHUTTER_TOPIC_CALIBRATE_PUBLISH_INTERMEDIATE "/calibrate/intermediate"
-#define SHUTTER_PAYLOAD_CALIBRATE_START "start"
-#define SHUTTER_PAYLOAD_CALIBRATE_ABORT "abort"
-#define SHUTTER_CALIBRATION_TIMEOUT (600000)
+
 #define SHUTTER_TOPIC_CONFIG "/configuration"
 
 #define SHUTTER_TOPIC_COMMAND "/command"
