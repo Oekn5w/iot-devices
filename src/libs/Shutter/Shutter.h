@@ -67,7 +67,7 @@ class Shutter
     };
 
     Shutter(stPins Pins, stTimings Timings, String topicBase,
-        PubSubClient* client, float motorValueMax);
+        PubSubClient* client, float motorValueMax = SHUTTER_MOTOR_SHUTOFF_DEFAULT);
 
     void callback(String topic, String payload);
     void setupMQTT();
@@ -145,7 +145,7 @@ class Shutter
     typeDeltaTime getRelativeTime(float percentage, stMovementState movement) const;
 
     static bool equalWithEps(float value);
-    static float clampPercentage(float value);
+    float clampPercentage(float value) const;
 };
 
 #endif

@@ -2,7 +2,7 @@
 #include "math.h"
 
 Shutter::Shutter(stPins Pins, stTimings Timings, String topicBase,
-    PubSubClient* client, float motorValueMax = SHUTTER_MOTOR_SHUTOFF_DEFAULT)
+    PubSubClient* client, float motorValueMax)
 {
   this->Pins = Pins;
   this->Timings = Timings;
@@ -785,7 +785,7 @@ bool Shutter::equalWithEps(float value)
   return (abs(value) < 0.1f);
 }
 
-float Shutter::clampPercentage(float value)
+float Shutter::clampPercentage(float value) const
 {
   value = min(value, this->motorValueMax);
   value = max(value, 0.0f);
