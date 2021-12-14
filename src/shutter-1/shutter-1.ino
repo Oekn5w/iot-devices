@@ -101,7 +101,7 @@ void setup()
 
   Serial.println("OTA service set up");
 
-  client.setServer(SECRET_MQTT_HOST, 1883);
+  client.setServer(SECRET_MQTT_HOST, SECRET_MQTT_PORT);
 
   Therm_Relais.setup();
   Only_Shutter.setup();

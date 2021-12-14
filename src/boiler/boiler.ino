@@ -88,7 +88,7 @@ void setup()
 
   Serial.println("OTA service set up");
 
-  client.setServer(SECRET_MQTT_HOST, 1883);
+  client.setServer(SECRET_MQTT_HOST, SECRET_MQTT_PORT);
 
   Therm_Board.setup();
   Therm_Boiler.setup();
