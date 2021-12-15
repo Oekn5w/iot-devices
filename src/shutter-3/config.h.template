@@ -1,0 +1,47 @@
+#define MQTT_CLIENT_ID "ESP32-Shutter3-dev"
+#define BASE_TOPIC_BOARD "shutter/boards/multi/dev"
+#define BOARD_PIN_TEMP (36)
+
+#define BASE_TOPIC_SHUTTER_A "shutter/3-dev-A"
+#define SHUTTER_A_VALUE_MOTOR_OFF (200)
+#define SHUTTER_A_PIN_OUT_U (21)
+#define SHUTTER_A_PIN_OUT_D (32)
+#define SHUTTER_A_PIN_IN_U (17)
+#define SHUTTER_A_PIN_IN_D (16)
+#define SHUTTER_A_PIN_TEMP (39)
+#define SHUTTER_A_TIME_0_1 (5000)
+#define SHUTTER_A_TIME_1_2 (3000)
+#define SHUTTER_A_TIME_1_0 (6000)
+#define SHUTTER_A_TIME_2_1 (3000)
+
+#define BASE_TOPIC_SHUTTER_B "shutter/3-dev-B"
+#define SHUTTER_B_VALUE_MOTOR_OFF (200)
+#define SHUTTER_B_PIN_OUT_U (26)
+#define SHUTTER_B_PIN_OUT_D (25)
+#define SHUTTER_B_PIN_IN_U (22)
+#define SHUTTER_B_PIN_IN_D (27)
+#define SHUTTER_B_PIN_TEMP (35)
+#define SHUTTER_B_TIME_0_1 (5000)
+#define SHUTTER_B_TIME_1_2 (3000)
+#define SHUTTER_B_TIME_1_0 (6000)
+#define SHUTTER_B_TIME_2_1 (3000)
+
+#define BASE_TOPIC_SHUTTER_C "shutter/3-dev-C"
+#define SHUTTER_C_VALUE_MOTOR_OFF (200)
+#define SHUTTER_C_PIN_OUT_U (13)
+#define SHUTTER_C_PIN_OUT_D (23)
+#define SHUTTER_C_PIN_IN_U (18)
+#define SHUTTER_C_PIN_IN_D (19)
+#define SHUTTER_C_PIN_TEMP (34)
+#define SHUTTER_C_TIME_0_1 (5000)
+#define SHUTTER_C_TIME_1_2 (3000)
+#define SHUTTER_C_TIME_1_0 (6000)
+#define SHUTTER_C_TIME_2_1 (3000)
+
+#define TOPIC_RELAIS_A_TEMP (BASE_TOPIC_SHUTTER_A "/temperature")
+#define TOPIC_RELAIS_B_TEMP (BASE_TOPIC_SHUTTER_B "/temperature")
+#define TOPIC_RELAIS_C_TEMP (BASE_TOPIC_SHUTTER_C "/temperature")
+#define TOPIC_BOARD_TEMP (BASE_TOPIC_BOARD "/temperature")
+#define TOPIC_BOARD_STATUS (BASE_TOPIC_BOARD "/status")
+#define TOPIC_BOARD_BUILDVER (BASE_TOPIC_BOARD "/build/version")
+#define TOPIC_BOARD_BUILDTIME (BASE_TOPIC_BOARD "/build/time")
