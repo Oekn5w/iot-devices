@@ -8,4 +8,6 @@ CUSTOM_LIBS := $(realpath $(THIS_DIR)/../libs) $(ESP_ROOT)/libraries
 
 ESP32 := 1
 
+include $(THIS_DIR)/secrets.mk
+
 include $(ESP_DEP_ROOT)/makeEspArduino/makeEspArduino.mk
