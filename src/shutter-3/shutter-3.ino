@@ -1,5 +1,7 @@
+#include <Arduino.h>
 #include "../secrets_general.h"
 #include "../config_general.h"
+#include "hw_config.h"
 #include "config.h"
 #include "secrets.h"
 #include <buildinfo.h>
@@ -7,7 +9,7 @@
 #include "WiFi.h"
 #include "PubSubClient.h"
 #include "Thermistor.h"
-#include "Heater.h"
+#include "Shutter.h"
 
 // not including the two headers here makes it failing to find them,
 // might be solved with #110 on makeEspArduino
@@ -18,6 +20,31 @@
 WiFiClient espclient;
 PubSubClient client(espclient);
 
+Thermistor Therm_Board(BOARD_PIN_TEMP, Thermistor::Type::B4300, TOPIC_BOARD_TEMP, &client);
+
+Thermistor Therm_Relais_A(PIN_A_TEMP, Thermistor::Type::B4300, TOPIC_RELAIS_A_TEMP, &client);
+Thermistor Therm_Relais_B(PIN_B_TEMP, Thermistor::Type::B4300, TOPIC_RELAIS_B_TEMP, &client);
+Thermistor Therm_Relais_C(PIN_C_TEMP, Thermistor::Type::B4300, TOPIC_RELAIS_C_TEMP, &client);
+
+Shutter Shutter_A(
+  {{SHUTTER_A_PIN_IN_D, SHUTTER_A_PIN_IN_U}, {SHUTTER_A_PIN_OUT_D, SHUTTER_A_PIN_OUT_U}},
+  {SHUTTER_A_TIME_0_1, SHUTTER_A_TIME_1_2, SHUTTER_A_TIME_1_0, SHUTTER_A_TIME_2_1},
+  BASE_TOPIC_SHUTTER_A, &client);
+Shutter Shutter_B(
+  {{SHUTTER_B_PIN_IN_D, SHUTTER_B_PIN_IN_U}, {SHUTTER_B_PIN_OUT_D, SHUTTER_B_PIN_OUT_U}},
+  {SHUTTER_B_TIME_0_1, SHUTTER_B_TIME_1_2, SHUTTER_B_TIME_1_0, SHUTTER_B_TIME_2_1},
+  BASE_TOPIC_SHUTTER_B, &client);
+Shutter Shutter_C(
+  {{SHUTTER_C_PIN_IN_D, SHUTTER_C_PIN_IN_U}, {SHUTTER_C_PIN_OUT_D, SHUTTER_C_PIN_OUT_U}},
+  {SHUTTER_C_TIME_0_1, SHUTTER_C_TIME_1_2, SHUTTER_C_TIME_1_0, SHUTTER_C_TIME_2_1},
+  BASE_TOPIC_SHUTTER_C, &client);
+
+void mqtt_callback(char* topic, byte* payload, unsigned int length);
+void check_connectivity();
+void IRAM_ATTR handleInterrupt();
+
+unsigned long connectivity_timevar;
+byte n_attempts;
 
 void setup()
 {
@@ -87,6 +114,16 @@ void setup()
 
   client.setServer(SECRET_MQTT_HOST, SECRET_MQTT_PORT);
 
+  Therm_Board.setup();
+
+  Therm_Relais_A.setup();
+  Therm_Relais_B.setup();
+  Therm_Relais_C.setup();
+
+  Shutter_A.setup();
+  Shutter_B.setup();
+  Shutter_C.setup();
+
   client.setCallback(mqtt_callback);
 
   n_attempts = 0;
@@ -102,6 +139,16 @@ void loop()
   ArduinoOTA.handle();
   client.loop();
 
+  Therm_Board.loop();
+
+  Therm_Relais_A.loop();
+  Therm_Relais_B.loop();
+  Therm_Relais_C.loop();
+
+  Shutter_A.loop();
+  Shutter_B.loop();
+  Shutter_C.loop();
+
   delay(5);
 }
 
@@ -112,9 +159,17 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length)
   for (int i = 0; i < length; i++) {
     strPayload += (char)payload[i];
   }
-  if(strTopic.startsWith(BASE_TOPIC_SHUTTER))
+  if(strTopic.startsWith(BASE_TOPIC_SHUTTER_A))
   {
-    Only_Shutter.callback(strTopic, strPayload);
+    Shutter_A.callback(strTopic, strPayload);
+  }
+  else if(strTopic.startsWith(BASE_TOPIC_SHUTTER_B))
+  {
+    Shutter_B.callback(strTopic, strPayload);
+  }
+  else if(strTopic.startsWith(BASE_TOPIC_SHUTTER_C))
+  {
+    Shutter_C.callback(strTopic, strPayload);
   }
 }
 
@@ -122,10 +177,14 @@ void check_connectivity()
 {
   if (WiFi.status() != WL_CONNECTED)
   {
-    if(!connectivity_timevar || millis() > connectivity_timevar)
+    if (!connectivity_timevar || millis() > connectivity_timevar)
     {
       n_attempts++;
-      if(n_attempts > 10 && Only_Shutter.getMovementState() == Shutter::stMovementState::mvSTOPPED)
+      if (n_attempts > 10 && 
+          Shutter_A.getMovementState() == Shutter::stMovementState::mvSTOPPED &&
+          Shutter_B.getMovementState() == Shutter::stMovementState::mvSTOPPED &&
+          Shutter_C.getMovementState() == Shutter::stMovementState::mvSTOPPED
+        )
       {
         Serial.println("WiFi unable to reconnect. Rebooting ESP device!");
         ESP.restart();
@@ -160,7 +219,9 @@ void check_connectivity()
         client.publish(TOPIC_BOARD_BUILDVER, _BuildInfo.src_version, true);
         String buildtime = String(_BuildInfo.date) + "T" + String(_BuildInfo.time);
         client.publish(TOPIC_BOARD_BUILDTIME, buildtime.c_str(), true);
-        Only_Shutter.setupMQTT();
+        Shutter_A.setupMQTT();
+        Shutter_B.setupMQTT();
+        Shutter_C.setupMQTT();
         Serial.println("MQTT connected!");
       }
       else
