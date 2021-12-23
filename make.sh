@@ -31,29 +31,30 @@ if [[ $# -ne 0 ]]; then
 fi
 
 echo
-echo "Processing shutter-1 ID1"
-make SHUTTER_ID=1 $@
+echo "Processing shutter-1"
+$SOURCEDIR/src/shutter-1/make-all.sh $@
 RES=$?
 if [[ "$RES" != "0" ]]; then
-  echo "make with ID 1 failed, aborting!"
   exit $RES
 fi
 
 echo
-echo "Processing shutter-1 ID2"
-make SHUTTER_ID=2 $@
+echo "Processing shutter-3"
+cd $SOURCEDIR/src/shutter-3
+make $@
 RES=$?
 if [[ "$RES" != "0" ]]; then
-  echo "make with ID 2 failed, aborting!"
+  echo "Shutter-3 make failed, aborting!"
   exit $RES
 fi
 
 echo
-echo "Processing shutter-1 ID3"
-make SHUTTER_ID=3 $@
+echo "Processing boiler"
+cd $SOURCEDIR/src/boiler
+make $@
 RES=$?
 if [[ "$RES" != "0" ]]; then
-  echo "make with ID 3 failed, aborting!"
+  echo "Boiler make failed, aborting!"
   exit $RES
 fi
 
