@@ -32,9 +32,9 @@ void setup()
 {
   Serial.begin(115200);
 
-  WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE);
+  WiFi.mode(WIFI_STA);
+  WiFi.hostname(MQTT_CLIENT_ID);
   WiFi.begin(SECRET_WIFI_SSID, SECRET_WIFI_PASSWORD);
-  WiFi.setHostname(MQTT_CLIENT_ID);
 
   n_attempts = 0;
   while (WiFi.status() != WL_CONNECTED && n_attempts++ < 20)
