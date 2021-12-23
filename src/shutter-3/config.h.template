@@ -1,5 +1,6 @@
 #define MQTT_CLIENT_ID "ESP32-Shutter3-dev"
 #define BASE_TOPIC_BOARD "shutter/boards/multi/dev"
+#include "hw_config.h"
 
 #define BASE_TOPIC_SHUTTER_A "shutter/3-dev-A"
 #define SHUTTER_A_VALUE_MOTOR_OFF (200)
