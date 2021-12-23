@@ -6,6 +6,16 @@
 #include "secrets.h"
 #include <buildinfo.h>
 
+#ifndef SHUTTER_A_VALUE_MOTOR_OFF
+#define SHUTTER_A_VALUE_MOTOR_OFF (SHUTTER_MOTOR_SHUTOFF_DEFAULT)
+#endif
+#ifndef SHUTTER_B_VALUE_MOTOR_OFF
+#define SHUTTER_B_VALUE_MOTOR_OFF (SHUTTER_MOTOR_SHUTOFF_DEFAULT)
+#endif
+#ifndef SHUTTER_C_VALUE_MOTOR_OFF
+#define SHUTTER_C_VALUE_MOTOR_OFF (SHUTTER_MOTOR_SHUTOFF_DEFAULT)
+#endif
+
 #include "WiFi.h"
 #include "PubSubClient.h"
 #include "Thermistor.h"
@@ -29,15 +39,15 @@ Thermistor Therm_Relais_C(PIN_C_TEMP, Thermistor::Type::B4300, TOPIC_RELAIS_C_TE
 Shutter Shutter_A(
   {{SHUTTER_A_PIN_IN_D, SHUTTER_A_PIN_IN_U}, {SHUTTER_A_PIN_OUT_D, SHUTTER_A_PIN_OUT_U}},
   {SHUTTER_A_TIME_0_1, SHUTTER_A_TIME_1_2, SHUTTER_A_TIME_1_0, SHUTTER_A_TIME_2_1},
-  BASE_TOPIC_SHUTTER_A, &client);
+  BASE_TOPIC_SHUTTER_A, &client, SHUTTER_A_VALUE_MOTOR_OFF);
 Shutter Shutter_B(
   {{SHUTTER_B_PIN_IN_D, SHUTTER_B_PIN_IN_U}, {SHUTTER_B_PIN_OUT_D, SHUTTER_B_PIN_OUT_U}},
   {SHUTTER_B_TIME_0_1, SHUTTER_B_TIME_1_2, SHUTTER_B_TIME_1_0, SHUTTER_B_TIME_2_1},
-  BASE_TOPIC_SHUTTER_B, &client);
+  BASE_TOPIC_SHUTTER_B, &client, SHUTTER_B_VALUE_MOTOR_OFF);
 Shutter Shutter_C(
   {{SHUTTER_C_PIN_IN_D, SHUTTER_C_PIN_IN_U}, {SHUTTER_C_PIN_OUT_D, SHUTTER_C_PIN_OUT_U}},
   {SHUTTER_C_TIME_0_1, SHUTTER_C_TIME_1_2, SHUTTER_C_TIME_1_0, SHUTTER_C_TIME_2_1},
-  BASE_TOPIC_SHUTTER_C, &client);
+  BASE_TOPIC_SHUTTER_C, &client, SHUTTER_C_VALUE_MOTOR_OFF);
 
 void mqtt_callback(char* topic, byte* payload, unsigned int length);
 void check_connectivity();
