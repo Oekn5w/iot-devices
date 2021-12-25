@@ -483,8 +483,15 @@ void Shutter::ButtonUpwardsPressed()
   switch(this->mode)
   {
     case modeNORMAL:
-      this->setTarget(0.0f);
-      this->timeButton = millis() + SHUTTER_TIMEOUT_BUTTON;
+      if (this->stateMovement == mvSTOPPED)
+      {
+        this->setTarget(0.0f);
+        this->timeButton = millis() + SHUTTER_TIMEOUT_BUTTON;
+      }
+      else
+      {
+        this->actuationRaw(stMovementState::mvSTOPPED, 0);
+      }
       break;
     case modeCALIBRATING:
       if (this->calibrationState != 1)
@@ -544,8 +551,15 @@ void Shutter::ButtonDownwardsPressed()
   switch(this->mode)
   {
     case modeNORMAL:
-      this->setTarget(SHUTTER_PAYLOAD_COMMAND_CLOSE_TARGET);
-      this->timeButton = millis() + SHUTTER_TIMEOUT_BUTTON;
+      if (this->stateMovement == mvSTOPPED)
+      {
+        this->setTarget(SHUTTER_PAYLOAD_COMMAND_CLOSE_TARGET);
+        this->timeButton = millis() + SHUTTER_TIMEOUT_BUTTON;
+      }
+      else
+      {
+        this->actuationRaw(stMovementState::mvSTOPPED, 0);
+      }
       break;
     case modeCALIBRATING:
       if (this->calibrationState <= 1)
