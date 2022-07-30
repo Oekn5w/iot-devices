@@ -20,7 +20,8 @@ class Thermistor
 
     enum Type {
       B3988,
-      B4300
+      B4300,
+      PT1000
     };
 #if ESP32 == 1
     Thermistor(byte channel, Type type, float R1, String topic, PubSubClient * mqttClient);

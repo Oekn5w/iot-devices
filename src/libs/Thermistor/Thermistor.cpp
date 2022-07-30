@@ -3,6 +3,7 @@
 
 constexpr Thermistor::strTypeValues NTC_B3988(true, 1.125181376127538e-03f, 2.347420615672053e-04f, 0.0f, 8.536313443746071e-08f);
 constexpr Thermistor::strTypeValues NTC_B4300(true, 1.295546029021604e-03f, 2.158573800965529e-04f, 0.0f, 8.980104686571273e-08f);
+constexpr Thermistor::strTypeValues PTC_PT1000(false, -245.925378962424f, 0.235877422656155f, 1.00499560366463e-05f, 0.0f);
 #define T0 (273.16f)
 #define MSG_BUFFER_SIZE	(10)
 char msg[MSG_BUFFER_SIZE];
@@ -42,6 +43,9 @@ Thermistor::Thermistor(Type type, float R1, String topic, PubSubClient * mqttCli
       break;
     case Type::B4300:
       this->typeValues = NTC_B4300;
+      break;
+    case Type::PT1000:
+      this->typeValues = PTC_PT1000;
       break;
     default:
       this->typeValues = strTypeValues();
