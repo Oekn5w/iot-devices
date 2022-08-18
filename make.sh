@@ -58,4 +58,14 @@ if [[ "$RES" != "0" ]]; then
   exit $RES
 fi
 
+echo
+echo "Processing boiler-solar"
+cd $SOURCEDIR/src/boiler-solar
+make $@
+RES=$?
+if [[ "$RES" != "0" ]]; then
+  echo "Boiler Solar make failed, aborting!"
+  exit $RES
+fi
+
 exit 0
