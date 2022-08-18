@@ -1,12 +1,11 @@
 #include "Thermistor.h"
 #include "math.h"
 
-constexpr Thermistor::strTypeValues NTC_B3988(true, 1.125181376127538e-03f, 2.347420615672053e-04f, 0.0f, 8.536313443746071e-08f);
-constexpr Thermistor::strTypeValues NTC_B4300(true, 1.295546029021604e-03f, 2.158573800965529e-04f, 0.0f, 8.980104686571273e-08f);
-constexpr Thermistor::strTypeValues PTC_PT1000(false, -245.925378962424f, 0.235877422656155f, 1.00499560366463e-05f, 0.0f);
+const Thermistor::strTypeValues NTC_B3988(true, 1.125181376127538e-03f, 2.347420615672053e-04f, 0.0f, 8.536313443746071e-08f);
+const Thermistor::strTypeValues NTC_B4300(true, 1.295546029021604e-03f, 2.158573800965529e-04f, 0.0f, 8.980104686571273e-08f);
+const Thermistor::strTypeValues PTC_PT1000(false, -245.925378962424f, 0.235877422656155f, 1.00499560366463e-05f, 0.0f);
 #define T0 (273.16f)
 #define MSG_BUFFER_SIZE	(10)
-char msg[MSG_BUFFER_SIZE];
 
 #if ESP32 == 1
 #define ADC_RES (4096.0f)
@@ -75,6 +74,7 @@ void Thermistor::loop()
     float temperature = this->getTemp();
     if (abs(temperature - this->publishedTemperature) > 0.1f)
     {
+      char msg[MSG_BUFFER_SIZE];
       snprintf(msg, MSG_BUFFER_SIZE, "%.1f", temperature);
       mqttClient->publish(topic.c_str(), msg, true);
       this->publishedTemperature = temperature;
