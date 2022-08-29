@@ -9,7 +9,7 @@ class Thermistor
     struct strTypeValues {
       strTypeValues() :
         useSH(false), order0(0.0f), order1(0.0f), order2(0.0f), order3(0.0f) {};
-      strTypeValues(bool use, float d0, float d1, float d2, float d3) :
+      constexpr strTypeValues(bool use, float d0, float d1, float d2, float d3) :
         useSH(use), order0(d0), order1(d1), order2(d2), order3(d3) {};
       bool useSH; // use Steinhart-Hart formula
       float order0;
