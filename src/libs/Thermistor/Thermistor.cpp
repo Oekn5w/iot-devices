@@ -1,13 +1,11 @@
 #include "Thermistor.h"
 #include "math.h"
 
-#define R1 (2400.0f) // in Ohm
-
-const float values_B3988[] = {1.125181376127538e-03f, 2.347420615672053e-04f, 8.536313443746071e-08f};
-const float values_B4300[] = {1.295546029021604e-03f, 2.158573800965529e-04f, 8.980104686571273e-08f};
+constexpr Thermistor::strTypeValues NTC_B3988(true, 1.125181376127538e-03f, 2.347420615672053e-04f, 0.0f, 8.536313443746071e-08f);
+constexpr Thermistor::strTypeValues NTC_B4300(true, 1.295546029021604e-03f, 2.158573800965529e-04f, 0.0f, 8.980104686571273e-08f);
+constexpr Thermistor::strTypeValues PTC_PT1000(false, -245.925378962424f, 0.235877422656155f, 1.00499560366463e-05f, 0.0f);
 #define T0 (273.16f)
 #define MSG_BUFFER_SIZE	(10)
-char msg[MSG_BUFFER_SIZE];
 
 #if ESP32 == 1
 #define ADC_RES (4096.0f)
@@ -21,12 +19,12 @@ char msg[MSG_BUFFER_SIZE];
 #define ADC_RES (1024.0f)
 #endif
 
-#define QUERY_INTERVAL 60000
+#define QUERY_INTERVAL (60000)
 
 #if ESP32 == 1
-Thermistor::Thermistor(byte channel, Type type, String topic, PubSubClient * mqttClient)
+Thermistor::Thermistor(byte channel, Type type, float R1, String topic, PubSubClient * mqttClient)
 #else
-Thermistor::Thermistor(Type type, String topic, PubSubClient * mqttClient)
+Thermistor::Thermistor(Type type, float R1, String topic, PubSubClient * mqttClient)
 #endif
 {
 #if ESP32 == 1
@@ -34,16 +32,22 @@ Thermistor::Thermistor(Type type, String topic, PubSubClient * mqttClient)
 #else
   this->channel = A0;
 #endif
+  this->R1 = R1;
   this->topic = topic;
   this->mqttClient = mqttClient;
   this->publishedTemperature = -500.0f;
   switch (type) {
     case Type::B3988:
-      this->pvalues = values_B3988;
+      this->typeValues = NTC_B3988;
       break;
     case Type::B4300:
+      this->typeValues = NTC_B4300;
+      break;
+    case Type::PT1000:
+      this->typeValues = PTC_PT1000;
+      break;
     default:
-      this->pvalues = values_B4300;
+      this->typeValues = strTypeValues();
       break;
   }
 }
@@ -70,6 +74,7 @@ void Thermistor::loop()
     float temperature = this->getTemp();
     if (abs(temperature - this->publishedTemperature) > 0.1f)
     {
+      char msg[MSG_BUFFER_SIZE];
       snprintf(msg, MSG_BUFFER_SIZE, "%.1f", temperature);
       mqttClient->publish(topic.c_str(), msg, true);
       this->publishedTemperature = temperature;
@@ -80,15 +85,30 @@ void Thermistor::loop()
 float Thermistor::getTemp()
 {
   float Rth = this->getResistance();
-  float temp = log(Rth);
-  float temp2 = pvalues[0] + pvalues[1] * temp + pvalues[2] * temp * temp * temp;
-  return (1.0f / temp2 - T0);
+  if(this->typeValues.useSH)
+  {
+    float temp = log(Rth);
+    float temp2 = 
+      this->typeValues.order0 + 
+      this->typeValues.order1 * temp + 
+      this->typeValues.order2 * temp * temp + 
+      this->typeValues.order3 * temp * temp * temp;
+    return (1.0f / temp2 - T0);
+  }
+  else
+  {
+    return
+      this->typeValues.order0 + 
+      this->typeValues.order1 * Rth + 
+      this->typeValues.order2 * Rth * Rth + 
+      this->typeValues.order3 * Rth * Rth * Rth;
+  }
 }
 
 float Thermistor::getResistance()
 {
   float ADCval = this->getADC();
-  float Rth = (1.0 * R1 * ADCval)/(1.0 * ADC_RES - ADCval);
+  float Rth = (1.0 * this->R1 * ADCval)/(1.0 * ADC_RES - ADCval);
   return Rth;
 }
 

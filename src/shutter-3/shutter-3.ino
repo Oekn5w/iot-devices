@@ -30,11 +30,11 @@
 WiFiClient espclient;
 PubSubClient client(espclient);
 
-Thermistor Therm_Board(BOARD_PIN_TEMP, Thermistor::Type::B4300, TOPIC_BOARD_TEMP, &client);
+Thermistor Therm_Board(BOARD_PIN_TEMP, Thermistor::Type::B4300, 2400.0f, TOPIC_BOARD_TEMP, &client);
 
-Thermistor Therm_Relais_A(PIN_A_TEMP, Thermistor::Type::B4300, TOPIC_RELAIS_A_TEMP, &client);
-Thermistor Therm_Relais_B(PIN_B_TEMP, Thermistor::Type::B4300, TOPIC_RELAIS_B_TEMP, &client);
-Thermistor Therm_Relais_C(PIN_C_TEMP, Thermistor::Type::B4300, TOPIC_RELAIS_C_TEMP, &client);
+Thermistor Therm_Relais_A(PIN_A_TEMP, Thermistor::Type::B4300, 2400.0f, TOPIC_RELAIS_A_TEMP, &client);
+Thermistor Therm_Relais_B(PIN_B_TEMP, Thermistor::Type::B4300, 2400.0f, TOPIC_RELAIS_B_TEMP, &client);
+Thermistor Therm_Relais_C(PIN_C_TEMP, Thermistor::Type::B4300, 2400.0f, TOPIC_RELAIS_C_TEMP, &client);
 
 Shutter Shutter_A(
   {{SHUTTER_A_PIN_IN_D, SHUTTER_A_PIN_IN_U}, {SHUTTER_A_PIN_OUT_D, SHUTTER_A_PIN_OUT_U}},
