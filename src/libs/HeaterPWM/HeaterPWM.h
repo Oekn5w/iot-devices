@@ -1,30 +1,42 @@
 #ifndef HeaterPWM_h
 #define HeaterPWM_h
 
-#define PAYLOAD_HEATER_ON "ON"
-#define PAYLOAD_HEATER_OFF "OFF"
-
 #include "PubSubClient.h"
 
 class HeaterPWM
 {
   public:
-    HeaterPWM(byte pin, byte channel, String topicStatus, PubSubClient * client);
+    struct HW_Config
+    {
+      byte pinPWM;
+      byte channel;
+      bool PWMActiveLow;
+      byte pinEN;
+      bool ENActiveLow;
+    };
 
-    void processTarget(uint16_t dutyCycle);
-    void turnOff();
+    HeaterPWM(HeaterPWM::HW_Config hw_config, String topicBase, PubSubClient * client);
+
+    void callback(String topic, String payload);
+    void setupMQTT();
 
     void setup();
     void loop();
   private:
     PubSubClient * mqttClient;
-    unsigned long timeout;
-    String topicStatus;
-    byte pin;
-    byte channel;
-    uint16_t state;
-    bool statePublished;
+    HeaterPWM::HW_Config hw_config;
+    unsigned long timeoutPWM;
+    unsigned long timeoutSwitch;
+    String topicBase;
+    uint16_t dC_Standby;
+    uint16_t dC;
+    bool dC_Published;
 
+    void turnOff();
+    void processPower(float power);
+    void processDutyCycle(uint16_t dutyCycle);
+    void processSwitch(bool newState);
+    void actuateNewDC(uint16_t dutyCycle);
     void publish();
 };
 
