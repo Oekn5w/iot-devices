@@ -18,7 +18,7 @@
 WiFiClient espclient;
 PubSubClient client(espclient);
 
-HeaterPWM heaterPWM({27, 0, true, false, 0, true}, TOPIC_BASE_HEATER_PWM, &client);
+HeaterPWM heaterPWM({{27, false}, 0, false, {0, true}}, TOPIC_BASE_HEATER_PWM, &client);
 
 void mqtt_callback(char* topic, byte* payload, unsigned int length);
 void check_connectivity();

@@ -1,23 +1,24 @@
 #include "HeaterPWM.h"
 #include "HeaterPWM_config.h"
 
-HeaterPWM::HeaterPWM(HeaterPWM::HW_Config hw_config, String topicBase, PubSubClient * client)
+HeaterPWM::HeaterPWM(HeaterPWM::stHWInfo infoHW, String topicBase, PubSubClient * client)
 {
-  this->hw_config = hw_config;
+  this->infoHW = infoHW;
   this->mqttClient = client;
   this->topicBase = topicBase;
+
   this->dC = 0;
   this->published = false;
 }
 
 void HeaterPWM::setup()
 {
-  ledcSetup(this->hw_config.channel, PWM_FREQ, PWM_RES_BITS);
-  ledcAttachPin(this->hw_config.pinPWM, this->hw_config.channel);
-  if (this->hw_config.ENActive)
+  ledcSetup(this->infoHW.channel, PWM_FREQ, PWM_RES_BITS);
+  ledcAttachPin(this->infoHW.PWM.Pin, this->infoHW.channel);
+  if (this->infoHW.useEnable)
   { 
-    pinMode(this->hw_config.pinEN, OUTPUT);
-    digitalWrite(this->hw_config.pinEN, this->hw_config.ENActiveLow ? 1 : 0);
+    pinMode(this->infoHW.Enable.Pin, OUTPUT);
+    digitalWrite(this->infoHW.Enable.Pin, this->infoHW.Enable.activeHigh ? 0 : 1);
   }
   this->bSwitch = false;
   this->timeoutSwitch = 0;
@@ -166,43 +167,43 @@ void HeaterPWM::actuateNewDC(uint16_t dutyCycle)
     #else
     if (capped && capped < PWM_DC_CAP_LOW) capped = PWM_DC_CAP_LOW;
     #endif
-    if (this->hw_config.PWMActiveLow)
+    if (this->infoHW.PWM.activeHigh)
     {
-      ledcWrite(this->hw_config.channel, PWM_DC_MAX - capped);
+      ledcWrite(this->infoHW.channel, capped);
     }
     else
     {
-      ledcWrite(this->hw_config.channel, capped);
+      ledcWrite(this->infoHW.channel, PWM_DC_MAX - capped);
     }
-    if (this->hw_config.ENActive)
+    if (this->infoHW.useEnable)
     {
       if (capped > 0)
       {
-        digitalWrite(this->hw_config.pinEN, this->hw_config.ENActiveLow ? 0 : 1);
+        digitalWrite(this->infoHW.Enable.Pin, this->infoHW.Enable.activeHigh ? 1 : 0);
       }
       else
       {
-        digitalWrite(this->hw_config.pinEN, this->hw_config.ENActiveLow ? 1 : 0);
+        digitalWrite(this->infoHW.Enable.Pin, this->infoHW.Enable.activeHigh ? 0 : 1);
       }
     }
   #else
-    if (this->hw_config.PWMActiveLow)
+    if (this->infoHW.PWM.activeHigh)
     {
-      ledcWrite(this->hw_config.channel, PWM_DC_MAX - dutyCycle);
+      ledcWrite(this->infoHW.channel, dutyCycle);
     }
     else
     {
-      ledcWrite(this->hw_config.channel, dutyCycle);
+      ledcWrite(this->infoHW.channel, PWM_DC_MAX - dutyCycle);
     }
-    if (this->hw_config.ENActive)
+    if (this->infoHW.useEnable)
     {
       if (dutyCycle > 0)
       {
-        digitalWrite(this->hw_config.pinEN, this->hw_config.ENActiveLow ? 0 : 1);
+        digitalWrite(this->infoHW.Enable.Pin, this->infoHW.Enable.activeHigh ? 1 : 0);
       }
       else
       {
-        digitalWrite(this->hw_config.pinEN, this->hw_config.ENActiveLow ? 1 : 0);
+        digitalWrite(this->infoHW.Enable.Pin, this->infoHW.Enable.activeHigh ? 0 : 1);
       }
     }
   #endif

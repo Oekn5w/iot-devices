@@ -6,17 +6,21 @@
 class HeaterPWM
 {
   public:
-    struct HW_Config
+    struct stPinInfo
     {
-      byte pinPWM;
-      byte channel;
-      bool PWMActiveLow;
-      bool ENActive;
-      byte pinEN;
-      bool ENActiveLow;
+      byte Pin;
+      bool activeHigh;
     };
 
-    HeaterPWM(HeaterPWM::HW_Config hw_config, String topicBase, PubSubClient * client);
+    struct stHWInfo
+    {
+      HeaterPWM::stPinInfo PWM;
+      byte channel;
+      bool useEnable;
+      HeaterPWM::stPinInfo Enable;
+    };
+
+    HeaterPWM(HeaterPWM::stHWInfo infoHW, String topicBase, PubSubClient * client);
 
     void callback(String topic, String payload);
     void setupMQTT();
@@ -25,7 +29,7 @@ class HeaterPWM
     void loop();
   private:
     PubSubClient * mqttClient;
-    HeaterPWM::HW_Config hw_config;
+    HeaterPWM::stHWInfo infoHW;
     unsigned long timeoutPWM;
     unsigned long timeoutSwitch;
     String topicBase;
