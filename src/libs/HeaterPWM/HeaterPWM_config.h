@@ -15,14 +15,14 @@ static_assert(!(PWM_ALWAYS && !PWM_CAPPED));
 
 #define MSG_BUFFER_SIZE	(10)
 
-#define HEATER_STATE_TOPIC "/command/switch"
-#define HEATER_STATE_PAYLOAD_ON "ON"
-#define HEATER_STATE_PAYLOAD_OFF "OFF"
+#define HEATER_SWITCH_TOPIC "/command/switch"
+#define HEATER_SWITCH_PAYLOAD_ON "ON"
+#define HEATER_SWITCH_PAYLOAD_OFF "OFF"
 
 #define HEATER_POWER_TOPIC "/command/power"
+#define HEATER_PWM_TOPIC "/command/pwm"
+#define HEATER_PWMINFO_TOPIC "/command/pwm_max"
 
-#define HEATER_STATE_TOPIC "/state/switch"
-#define HEATER_STATE_PWM "/state/pwm"
-
-
-
+#define HEATER_STATE_SWTICH_TOPIC "/state/switch"
+#define HEATER_STATE_PWM_TOPIC "/state/pwm"
+#define HEATER_STATE_ACT_TOPIC "/state/actuated"

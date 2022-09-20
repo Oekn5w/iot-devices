@@ -7,36 +7,38 @@ HeaterPWM::HeaterPWM(HeaterPWM::HW_Config hw_config, String topicBase, PubSubCli
   this->mqttClient = client;
   this->topicBase = topicBase;
   this->dC = 0;
-  this->dC_Published = false;
+  this->published = false;
 }
 
 void HeaterPWM::setup()
 {
   ledcSetup(this->hw_config.channel, PWM_FREQ, PWM_RES_BITS);
   ledcAttachPin(this->hw_config.pinPWM, this->hw_config.channel);
-#if PWM_CAPPED > 0
-  #if PWM_INVERSE > 0
-  ledcWrite(this->hw_config.channel, PWM_DC_MAX - PWM_DC_CAP_LOW);
-  #else
-  ledcWrite(this->hw_config.channel, PWM_DC_CAP_LOW);
-  #endif
-#else
-  #if PWM_INVERSE > 0
-  ledcWrite(this->hw_config.channel, PWM_DC_MAX);
-  #else
-  ledcWrite(this->hw_config.channel, 0);
-  #endif
-#endif
-  this->timeout = 0;
+  if (this->hw_config.ENActive)
+  { 
+    pinMode(this->hw_config.pinEN, OUTPUT);
+    digitalWrite(this->hw_config.pinEN, this->hw_config.ENActiveLow ? 1 : 0);
+  }
+  this->bSwitch = false;
+  this->timeoutSwitch = 0;
+  this->dC_Standby = 0;
+  this->timeoutPWM = 0;
+  this->turnOff();
 }
 
 void HeaterPWM::loop()
 {
-  if(this->state && millis() > this->timeout)
+  if(this->bSwitch && millis() > this->timeoutSwitch)
   {
-    this->turnOff();
+    this->processSwitch(false);
+    this->timeoutSwitch = 0;
   }
-  if(!this->statePublished && mqttClient->connected())
+  if(this->dC_Standby > 0 && millis() > this->timeoutPWM)
+  {
+    this->processDutyCycle(0);
+    this->timeoutPWM = 0;
+  }
+  if(!this->published && mqttClient->connected())
   {
     this->publish();
   }
@@ -44,11 +46,43 @@ void HeaterPWM::loop()
 
 void HeaterPWM::callback(String topic, String payload)
 {
-
+  if (topic.startsWith(this->topicBase))
+  {
+    topic = topic.substring(this->topicBase.length());
+    if (topic == HEATER_SWITCH_TOPIC)
+    {
+      if (payload == HEATER_SWITCH_PAYLOAD_ON)
+      {
+        this->processSwitch(true);
+      }
+      else if (payload == HEATER_SWITCH_PAYLOAD_OFF)
+      {
+        this->processSwitch(false);
+      }
+    }
+    else if (topic == HEATER_POWER_TOPIC)
+    {
+      this->processPower((payload.toFloat()));
+    }
+    else if (topic == HEATER_PWM_TOPIC)
+    {
+      this->processDutyCycle((uint16_t)(payload.toInt()));
+    }
+  }
 }
 
 void HeaterPWM::setupMQTT()
 {
+  String tempTopic = this->topicBase + HEATER_SWITCH_TOPIC;
+  mqttClient->subscribe(tempTopic.c_str());
+  tempTopic = this->topicBase + HEATER_POWER_TOPIC;
+  mqttClient->subscribe(tempTopic.c_str());
+  tempTopic = this->topicBase + HEATER_PWM_TOPIC;
+  mqttClient->subscribe(tempTopic.c_str());
+  tempTopic = this->topicBase + HEATER_PWMINFO_TOPIC;
+  char msg[MSG_BUFFER_SIZE];
+  snprintf(msg, MSG_BUFFER_SIZE, "%d", PWM_DC_MAX);
+  mqttClient->publish(tempTopic.c_str(), msg, true);
 }
 
 void HeaterPWM::publish()
@@ -56,28 +90,64 @@ void HeaterPWM::publish()
   if(mqttClient->connected())
   {
     char msg[MSG_BUFFER_SIZE];
-    snprintf(msg, MSG_BUFFER_SIZE, "%d", this->state);
-    mqttClient->publish(topicStatus.c_str(), msg, true);
-    this->statePublished = true;
+    String tempTopic = this->topicBase + HEATER_STATE_SWTICH_TOPIC;
+    mqttClient->publish(tempTopic.c_str(),
+        this->bSwitch ? HEATER_SWITCH_PAYLOAD_ON : HEATER_SWITCH_PAYLOAD_OFF,
+        true);
+    
+    tempTopic = this->topicBase + HEATER_STATE_PWM_TOPIC;
+    snprintf(msg, MSG_BUFFER_SIZE, "%d", this->dC_Standby);
+    mqttClient->publish(tempTopic.c_str(), msg, true);
+    
+    tempTopic = this->topicBase + HEATER_STATE_ACT_TOPIC;
+    snprintf(msg, MSG_BUFFER_SIZE, "%d", this->dC);
+    mqttClient->publish(tempTopic.c_str(), msg, true);
+    
+    this->published = true;
   }
   else
   {
-    this->statePublished = false;
+    this->published = false;
   }
 }
 
 void HeaterPWM::processPower(float power)
 {
-
+  uint16_t dutyCycle;
+  // TODO: Lookup table
+  this->processDutyCycle(dutyCycle);
 }
 
 void HeaterPWM::processDutyCycle(uint16_t dutyCycle)
 {
+  if (dutyCycle > PWM_DC_MAX)
+  {
+    dutyCycle = 0;
+  }
+  if (dutyCycle > 0)
+  {
+    this->timeoutPWM = millis() + KEEPALIVE_INTERVAL;
+  }
+  else
+  {
+    this->timeoutPWM = 0;
+  }
+  this->dC_Standby = dutyCycle;
+  this->actuateNewDC(this->bSwitch * this->dC_Standby);
 }
 
 void HeaterPWM::processSwitch(bool newState)
 {
-
+  if (newState)
+  {
+    this->timeoutSwitch = millis() + KEEPALIVE_INTERVAL;
+  }
+  else
+  {
+    this->timeoutSwitch = 0;
+  }
+  this->bSwitch = newState;
+  this->actuateNewDC(this->bSwitch * this->dC_Standby);
 }
 
 void HeaterPWM::actuateNewDC(uint16_t dutyCycle)
@@ -85,11 +155,6 @@ void HeaterPWM::actuateNewDC(uint16_t dutyCycle)
   if(dutyCycle > PWM_DC_MAX)
   {
     dutyCycle = 0;
-  }
-  if(!dutyCycle)
-  {
-    this->timeoutPWM = -1;
-    this->timeoutSwitch= -1;
   }
   if (this->dC != dutyCycle)
   {
@@ -109,6 +174,17 @@ void HeaterPWM::actuateNewDC(uint16_t dutyCycle)
     {
       ledcWrite(this->hw_config.channel, capped);
     }
+    if (this->hw_config.ENActive)
+    {
+      if (capped > 0)
+      {
+        digitalWrite(this->hw_config.pinEN, this->hw_config.ENActiveLow ? 0 : 1);
+      }
+      else
+      {
+        digitalWrite(this->hw_config.pinEN, this->hw_config.ENActiveLow ? 1 : 0);
+      }
+    }
   #else
     if (this->hw_config.PWMActiveLow)
     {
@@ -118,13 +194,24 @@ void HeaterPWM::actuateNewDC(uint16_t dutyCycle)
     {
       ledcWrite(this->hw_config.channel, dutyCycle);
     }
+    if (this->hw_config.ENActive)
+    {
+      if (dutyCycle > 0)
+      {
+        digitalWrite(this->hw_config.pinEN, this->hw_config.ENActiveLow ? 0 : 1);
+      }
+      else
+      {
+        digitalWrite(this->hw_config.pinEN, this->hw_config.ENActiveLow ? 1 : 0);
+      }
+    }
   #endif
-    this->state = dutyCycle;
+    this->dC = dutyCycle;
     this->publish();
   }
 }
 
 void HeaterPWM::turnOff()
 {
-  this->actuateNewDC(0);
+  this->processSwitch(false);
 }

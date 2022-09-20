@@ -11,6 +11,7 @@ class HeaterPWM
       byte pinPWM;
       byte channel;
       bool PWMActiveLow;
+      bool ENActive;
       byte pinEN;
       bool ENActiveLow;
     };
@@ -28,9 +29,10 @@ class HeaterPWM
     unsigned long timeoutPWM;
     unsigned long timeoutSwitch;
     String topicBase;
+    bool bSwitch;
     uint16_t dC_Standby;
     uint16_t dC;
-    bool dC_Published;
+    bool published;
 
     void turnOff();
     void processPower(float power);
