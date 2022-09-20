@@ -1,6 +1,5 @@
 
 #define KEEPALIVE_INTERVAL 300000 // 5 min
-// #define PWM_INVERSE (0)
 #define PWM_ALWAYS (0)
 #define PWM_FREQ (1000)
 #define PWM_RES_BITS (10)

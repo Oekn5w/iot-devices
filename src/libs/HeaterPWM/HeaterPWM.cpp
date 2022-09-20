@@ -223,8 +223,8 @@ void HeaterPWM::actuateNewDC(uint16_t dutyCycle)
     }
   #endif
     this->dC = dutyCycle;
-    this->publish();
   }
+  this->publish();
 }
 
 void HeaterPWM::turnOff()
