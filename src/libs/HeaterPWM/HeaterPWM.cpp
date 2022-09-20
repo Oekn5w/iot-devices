@@ -1,5 +1,6 @@
 #include "HeaterPWM.h"
 #include "HeaterPWM_config.h"
+#include "HeaterPWM_LUT.h"
 
 HeaterPWM::HeaterPWM(HeaterPWM::stHWInfo infoHW, String topicBase, PubSubClient * client)
 {
@@ -115,7 +116,21 @@ void HeaterPWM::publish()
 void HeaterPWM::processPower(float power)
 {
   uint16_t dutyCycle;
-  // TODO: Lookup table
+  if (power <= LUT_power[0])
+  {
+    dutyCycle = LUT_DC[0];
+  }
+  else if (power >= LUT_power[LUT_number - 1])
+  {
+    dutyCycle = LUT_DC[LUT_number - 1];
+  }
+  else
+  {
+    uint16_t i = 0;
+    while (power >= LUT_power[i + 1]) i++;
+    float t = (power - LUT_power[i]) / (LUT_power[i + 1] - LUT_power[i]);
+    dutyCycle = LUT_DC[i] * (1.0f - t) + LUT_DC[i + 1] * t;
+  }
   this->processDutyCycle(dutyCycle);
 }
 
