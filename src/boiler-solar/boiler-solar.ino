@@ -18,7 +18,7 @@
 WiFiClient espclient;
 PubSubClient client(espclient);
 
-HeaterPWM heaterPWM(27, 0, TOPIC_PWM_STATUS, &client);
+HeaterPWM heaterPWM({27, 0, true, false, 0, true}, TOPIC_BASE_HEATER_PWM, &client);
 
 void mqtt_callback(char* topic, byte* payload, unsigned int length);
 void check_connectivity();
@@ -117,10 +117,9 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length)
   for (int i = 0; i < length; i++) {
     strPayload += (char)payload[i];
   }
-  if(strTopic == TOPIC_PWM_SET)
+  if(strTopic.startsWith(TOPIC_BASE_HEATER_PWM))
   {
-    uint16_t newDC = (uint16_t)(strPayload.toInt());
-    heaterPWM.processTarget(newDC);
+    heaterPWM.callback(strTopic, strPayload);
   }
 }
 
@@ -166,7 +165,7 @@ void check_connectivity()
         client.publish(TOPIC_BOARD_BUILDVER, _BuildInfo.src_version, true);
         String buildtime = String(_BuildInfo.date) + "T" + String(_BuildInfo.time);
         client.publish(TOPIC_BOARD_BUILDTIME, buildtime.c_str(), true);
-        client.subscribe(TOPIC_PWM_SET);
+        heaterPWM.setupMQTT();
         Serial.println("MQTT connected!");
       }
       else
