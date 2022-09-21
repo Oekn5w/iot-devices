@@ -21,6 +21,10 @@ static_assert(!(PWM_ALWAYS && !PWM_CAPPED));
 static_assert(PWM_DC_CAP_HIGH > PWM_DC_CAP_LOW);
 #endif // PWM_CAPPED
 
+// the resistor cannot puldown the 12V signal sufficiently to register the low part anymore
+// apply full signal then, overriding the High CAP unless it is below that theshold
+#define PWM_DC_FULL_THRESH ((int)(PWM_DC_MAX * 0.9952))
+
 #define MSG_BUFFER_SIZE	(10)
 
 #define HEATER_SWITCH_TOPIC "/command/switch"

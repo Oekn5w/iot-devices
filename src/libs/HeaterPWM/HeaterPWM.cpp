@@ -177,6 +177,7 @@ void HeaterPWM::actuateNewDC(uint16_t dutyCycle)
     uint16_t dCToApply = dutyCycle;
   #if PWM_CAPPED > 0
     if (dCToApply > PWM_DC_CAP_HIGH) dCToApply = PWM_DC_CAP_HIGH;
+    if (dCToApply >= PWM_DC_FULL_THRESH) dCToApply = PWM_DC_MAX;
     #if PWM_ALWAYS > 0
     if (dCToApply < PWM_DC_CAP_LOW) dCToApply = PWM_DC_CAP_LOW;
     #else // PWM_ALWAYS
@@ -202,6 +203,7 @@ void HeaterPWM::actuateNewDC(uint16_t dutyCycle)
       }
     }
   #else // PWM_CAPPED
+    if (dCToApply >= PWM_DC_FULL_THRESH) dCToApply = PWM_DC_MAX;
     if (this->infoHW.PWM.activeHigh)
     {
       ledcWrite(this->infoHW.channel, dCToApply);
