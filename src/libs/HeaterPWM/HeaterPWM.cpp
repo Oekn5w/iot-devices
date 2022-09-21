@@ -174,25 +174,25 @@ void HeaterPWM::actuateNewDC(uint16_t dutyCycle)
   }
   if (this->dC != dutyCycle)
   {
+    uint16_t dCToApply = dutyCycle;
   #if PWM_CAPPED > 0
-    uint16_t capped = dutyCycle;
-    if (capped > PWM_DC_CAP_HIGH) capped = PWM_DC_CAP_HIGH;
+    if (dCToApply > PWM_DC_CAP_HIGH) dCToApply = PWM_DC_CAP_HIGH;
     #if PWM_ALWAYS > 0
-    if (capped < PWM_DC_CAP_LOW) capped = PWM_DC_CAP_LOW;
-    #else
-    if (capped && capped < PWM_DC_CAP_LOW) capped = PWM_DC_CAP_LOW;
-    #endif
+    if (dCToApply < PWM_DC_CAP_LOW) dCToApply = PWM_DC_CAP_LOW;
+    #else // PWM_ALWAYS
+    if (dCToApply && dCToApply < PWM_DC_CAP_LOW) dCToApply = PWM_DC_CAP_LOW;
+    #endif // PWM_ALWAYS
     if (this->infoHW.PWM.activeHigh)
     {
-      ledcWrite(this->infoHW.channel, capped);
+      ledcWrite(this->infoHW.channel, dCToApply);
     }
     else
     {
-      ledcWrite(this->infoHW.channel, PWM_DC_MAX - capped);
+      ledcWrite(this->infoHW.channel, PWM_DC_MAX - dCToApply);
     }
     if (this->infoHW.useEnable)
     {
-      if (capped > 0)
+      if (dCToApply > 0)
       {
         digitalWrite(this->infoHW.Enable.Pin, this->infoHW.Enable.activeHigh ? 1 : 0);
       }
@@ -201,18 +201,18 @@ void HeaterPWM::actuateNewDC(uint16_t dutyCycle)
         digitalWrite(this->infoHW.Enable.Pin, this->infoHW.Enable.activeHigh ? 0 : 1);
       }
     }
-  #else
+  #else // PWM_CAPPED
     if (this->infoHW.PWM.activeHigh)
     {
-      ledcWrite(this->infoHW.channel, dutyCycle);
+      ledcWrite(this->infoHW.channel, dCToApply);
     }
     else
     {
-      ledcWrite(this->infoHW.channel, PWM_DC_MAX - dutyCycle);
+      ledcWrite(this->infoHW.channel, PWM_DC_MAX - dCToApply);
     }
     if (this->infoHW.useEnable)
     {
-      if (dutyCycle > 0)
+      if (dCToApply > 0)
       {
         digitalWrite(this->infoHW.Enable.Pin, this->infoHW.Enable.activeHigh ? 1 : 0);
       }
@@ -221,7 +221,7 @@ void HeaterPWM::actuateNewDC(uint16_t dutyCycle)
         digitalWrite(this->infoHW.Enable.Pin, this->infoHW.Enable.activeHigh ? 0 : 1);
       }
     }
-  #endif
+  #endif // PWM_CAPPED
     this->dC = dutyCycle;
   }
   this->publish();
