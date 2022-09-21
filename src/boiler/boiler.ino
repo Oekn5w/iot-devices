@@ -18,7 +18,7 @@
 WiFiClient espclient;
 PubSubClient client(espclient);
 
-Thermistor Therm_Boiler(35, Thermistor::Type::B3988, 2400.0f, TOPIC_WATER_TEMP, &client);
+Thermistor Therm_Boiler(35, Thermistor::Type::PT1000, 2400.0f, TOPIC_WATER_TEMP, &client);
 Thermistor Therm_Board(34, Thermistor::Type::B4300, 2400.0f, TOPIC_BOARD_TEMP, &client);
 Heater heater(33, TOPIC_HEATER_STATUS, &client);
 
