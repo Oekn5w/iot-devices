@@ -1,0 +1,3 @@
+constexpr uint16_t LUT_number = 3;
+constexpr float LUT_power[LUT_number] = {0, 1500, 3000};
+constexpr float LUT_DC[LUT_number] = {0, (PWM_DC_MAX/2), PWM_DC_MAX};

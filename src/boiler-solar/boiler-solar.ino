@@ -7,7 +7,7 @@
 #include "WiFi.h"
 #include "PubSubClient.h"
 #include "Thermistor.h"
-#include "Heater.h"
+#include "HeaterPWM.h"
 
 // not including the two headers here makes it failing to find them,
 // might be solved with #110 on makeEspArduino
@@ -18,9 +18,7 @@
 WiFiClient espclient;
 PubSubClient client(espclient);
 
-Thermistor Therm_Boiler(35, Thermistor::Type::PT1000, 2400.0f, TOPIC_WATER_TEMP, &client);
-Thermistor Therm_Board(34, Thermistor::Type::B4300, 2400.0f, TOPIC_BOARD_TEMP, &client);
-Heater heater(33, TOPIC_HEATER_STATUS, &client);
+HeaterPWM heaterPWM({{27, true}, 0, true, {26, true}}, TOPIC_BASE_HEATER_PWM, &client);
 
 void mqtt_callback(char* topic, byte* payload, unsigned int length);
 void check_connectivity();
@@ -90,9 +88,7 @@ void setup()
 
   client.setServer(SECRET_MQTT_HOST, SECRET_MQTT_PORT);
 
-  Therm_Board.setup();
-  Therm_Boiler.setup();
-  heater.setup();
+  heaterPWM.setup();
 
   client.setCallback(mqtt_callback);
 
@@ -109,9 +105,7 @@ void loop()
   ArduinoOTA.handle();
   client.loop();
 
-  Therm_Board.loop();
-  Therm_Boiler.loop();
-  heater.loop();
+  heaterPWM.loop();
 
   delay(50);
 }
@@ -123,16 +117,9 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length)
   for (int i = 0; i < length; i++) {
     strPayload += (char)payload[i];
   }
-  if(strTopic == TOPIC_HEATER_CONTROL)
+  if(strTopic.startsWith(TOPIC_BASE_HEATER_PWM))
   {
-    if(strPayload == PAYLOAD_HEATER_ON)
-    {
-      heater.turnOn();
-    }
-    else if(strPayload == PAYLOAD_HEATER_OFF)
-    {
-      heater.turnOff();
-    }
+    heaterPWM.callback(strTopic, strPayload);
   }
 }
 
@@ -178,7 +165,7 @@ void check_connectivity()
         client.publish(TOPIC_BOARD_BUILDVER, _BuildInfo.src_version, true);
         String buildtime = String(_BuildInfo.date) + "T" + String(_BuildInfo.time);
         client.publish(TOPIC_BOARD_BUILDTIME, buildtime.c_str(), true);
-        client.subscribe(TOPIC_HEATER_CONTROL);
+        heaterPWM.setupMQTT();
         Serial.println("MQTT connected!");
       }
       else
