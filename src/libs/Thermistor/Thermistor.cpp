@@ -21,6 +21,12 @@ constexpr Thermistor::strTypeValues PTC_PT1000(false, -245.925378962424f, 0.2358
 
 #define QUERY_INTERVAL (60000)
 
+#ifndef TEMP_VALIDATE_VALUES
+#define TEMP_VALIDATE_VALUES  (1)
+#endif
+#define TEMP_LOWER_BOUND  (-30.0f)
+#define TEMP_UPPER_BOUND  (120.0f)
+
 #if ESP32 == 1
 Thermistor::Thermistor(byte channel, Type type, float R1, String topic, PubSubClient * mqttClient)
 #else
@@ -72,6 +78,10 @@ void Thermistor::loop()
       this->next_query = uptime + QUERY_INTERVAL;
     }
     float temperature = this->getTemp();
+#if TEMP_VALIDATE_VALUES > 0
+    if (temperature < TEMP_LOWER_BOUND) return;
+    if (temperature > TEMP_UPPER_BOUND) return;
+#endif
     if (abs(temperature - this->publishedTemperature) > 0.1f)
     {
       char msg[MSG_BUFFER_SIZE];
