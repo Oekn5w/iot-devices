@@ -6,10 +6,16 @@ cd "$SCRIPTPATH"
 
 if [[ ! -d "$SCRIPTPATH/deps" ]]; then
   mkdir deps
-  cd deps
-  git clone https://github.com/plerup/makeEspArduino.git
-  git clone https://github.com/esp8266/Arduino.git esp8266
-  git clone https://github.com/espressif/arduino-esp32.git esp32
+fi
+
+if [[ ! -d "$SCRIPTPATH/deps/makeEspArduino" ]]; then
+  git clone https://github.com/plerup/makeEspArduino.git "$SCRIPTPATH/deps/makeEspArduino"
+fi
+if [[ ! -d "$SCRIPTPATH/deps/esp8266" ]]; then
+  git clone https://github.com/esp8266/Arduino.git "$SCRIPTPATH/deps/esp8266"
+fi
+if [[ ! -d "$SCRIPTPATH/deps/esp32" ]]; then
+  git clone https://github.com/espressif/arduino-esp32.git "$SCRIPTPATH/deps/esp32"
 fi
 
 cd "$SCRIPTPATH/deps/makeEspArduino"
