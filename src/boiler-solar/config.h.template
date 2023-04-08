@@ -1,10 +1,10 @@
-#define TOPIC_WATER_TEMP1 "boiler-solar/water/temperature1"
-#define TOPIC_WATER_TEMP2 "boiler-solar/water/temperature2"
 #define TOPIC_BOARD_TEMP "boiler-solar/board/temperature"
 #define TOPIC_BOARD_STATUS "boiler-solar/board/status"
 #define TOPIC_BOARD_BUILDVER "boiler-solar/board/build/version"
 #define TOPIC_BOARD_BUILDTIME "boiler-solar/board/build/time"
 
-#define TOPIC_BASE_HEATER_PWM "boiler-solar/water/el"
+#define TOPIC_BASE_HEATER_PWM "boiler-solar/water/pwm"
+#define TOPIC_HEATER_REL_CONTROL "boiler-solar/water/rel/set"
+#define TOPIC_HEATER_REL_STATUS "boiler-solar/water/rel/status"
 
 #define MQTT_CLIENT_ID "ESP32-Boiler-Solar"

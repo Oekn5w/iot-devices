@@ -7,6 +7,7 @@
 #include "WiFi.h"
 #include "PubSubClient.h"
 #include "Thermistor.h"
+#include "Heater.h"
 #include "HeaterPWM.h"
 
 // not including the two headers here makes it failing to find them,
@@ -18,7 +19,8 @@
 WiFiClient espclient;
 PubSubClient client(espclient);
 
-HeaterPWM heaterPWM({{27, true}, 0, true, {26, true}}, TOPIC_BASE_HEATER_PWM, &client);
+Heater heaterRel(21, TOPIC_HEATER_REL_STATUS, &client);
+HeaterPWM heaterPWM({{2, true}, 0, true, {12, true}}, TOPIC_BASE_HEATER_PWM, &client);
 
 void mqtt_callback(char* topic, byte* payload, unsigned int length);
 void check_connectivity();
@@ -88,6 +90,7 @@ void setup()
 
   client.setServer(SECRET_MQTT_HOST, SECRET_MQTT_PORT);
 
+  heaterRel.setup();
   heaterPWM.setup();
 
   client.setCallback(mqtt_callback);
@@ -105,6 +108,7 @@ void loop()
   ArduinoOTA.handle();
   client.loop();
 
+  heaterRel.loop();
   heaterPWM.loop();
 
   delay(50);
@@ -120,6 +124,17 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length)
   if(strTopic.startsWith(TOPIC_BASE_HEATER_PWM))
   {
     heaterPWM.callback(strTopic, strPayload);
+  }
+  if(strTopic == TOPIC_HEATER_REL_CONTROL)
+  {
+    if(strPayload == PAYLOAD_HEATER_ON)
+    {
+      heaterRel.turnOn();
+    }
+    else if(strPayload == PAYLOAD_HEATER_OFF)
+    {
+      heaterRel.turnOff();
+    }
   }
 }
 
@@ -166,6 +181,7 @@ void check_connectivity()
         String buildtime = String(_BuildInfo.date) + "T" + String(_BuildInfo.time);
         client.publish(TOPIC_BOARD_BUILDTIME, buildtime.c_str(), true);
         heaterPWM.setupMQTT();
+        client.subscribe(TOPIC_HEATER_REL_CONTROL);
         Serial.println("MQTT connected!");
       }
       else
