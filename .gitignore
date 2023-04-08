@@ -4,3 +4,4 @@ build*/
 secrets*
 !secrets*.template
 config.h
+/src/dev-*/
