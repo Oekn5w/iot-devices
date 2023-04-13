@@ -1,9 +1,0 @@
-#define TOPIC_WATER_TEMP "boiler/water/temperature"
-#define TOPIC_BOARD_TEMP "boiler/board/temperature"
-#define TOPIC_BOARD_STATUS "boiler/board/status"
-#define TOPIC_BOARD_BUILDVER "boiler/board/build/version"
-#define TOPIC_BOARD_BUILDTIME "boiler/board/build/time"
-#define TOPIC_HEATER_CONTROL "boiler/water/heater/set"
-#define TOPIC_HEATER_STATUS "boiler/water/heater/status"
-
-#define MQTT_CLIENT_ID "ESP32-Boiler"
