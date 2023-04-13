@@ -16,6 +16,8 @@
 #include "ESPmDNS.h"
 #include "ArduinoOTA.h"
 
+#define SETUP_DISABLE_LED(gpio) pinMode(gpio, OUTPUT); digitalWrite(gpio, 0);
+
 WiFiClient espclient;
 PubSubClient client(espclient);
 
@@ -92,6 +94,13 @@ void setup()
 
   heaterRel.setup();
   heaterPWM.setup();
+
+  SETUP_DISABLE_LED(13); // PWM
+  SETUP_DISABLE_LED(27); // WW
+  SETUP_DISABLE_LED(12); // Gas
+  SETUP_DISABLE_LED(19); // Temp_1
+  SETUP_DISABLE_LED(5);  // Temp_2
+  SETUP_DISABLE_LED(17); // Temp_3
 
   client.setCallback(mqtt_callback);
 
