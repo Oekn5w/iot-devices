@@ -1,0 +1,7 @@
+#define KEEPALIVE_INTERVAL 300000 // 5 min
+
+#define PAYLOAD_HEATER_ON "ON"
+#define PAYLOAD_HEATER_OFF "OFF"
+
+#define SUBTOPIC_HEATER_REL_CMD "/set"
+#define SUBTOPIC_HEATER_REL_STATE "/state"
