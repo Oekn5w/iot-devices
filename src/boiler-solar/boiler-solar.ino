@@ -7,7 +7,7 @@
 #include "WiFi.h"
 #include "PubSubClient.h"
 #include "Thermistor.h"
-#include "Heater.h"
+#include "HeaterRelais.h"
 #include "HeaterPWM.h"
 
 // not including the two headers here makes it failing to find them,
@@ -21,8 +21,26 @@
 WiFiClient espclient;
 PubSubClient client(espclient);
 
-Heater heaterRel(21, TOPIC_HEATER_REL_STATUS, &client);
-HeaterPWM heaterPWM({{2, true}, 0, true, {12, true}}, TOPIC_BASE_HEATER_PWM, &client);
+Heater::HeaterRelaisSettings heaterRelSet;
+Heater::HeaterPWMSettings heaterPWMSet;
+Heater::HeaterRelais heaterRel(&heaterRelSet, &client);
+Heater::HeaterPWM heaterPWM(&heaterPWMSet, &client);
+
+void setupSettingStructs()
+{
+  heaterRelSet.switchPin = 21;
+  heaterRelSet.switchActiveHigh = true;
+  heaterRelSet.ledEnable = false;
+  heaterRelSet.topicBase = TOPIC_BASE_HEATER_RELAIS;
+
+  heaterPWMSet.outPin = 2;
+  heaterPWMSet.outChannel = 0;
+  heaterPWMSet.outActiveHigh = true;
+  heaterPWMSet.fbEnable = true;
+  heaterPWMSet.fbPin = 12;
+  heaterPWMSet.fbActiveHigh = true;
+  heaterPWMSet.topicBase = TOPIC_BASE_HEATER_PWM;
+}
 
 void mqtt_callback(char* topic, byte* payload, unsigned int length);
 void check_connectivity();
@@ -92,6 +110,8 @@ void setup()
 
   client.setServer(SECRET_MQTT_HOST, SECRET_MQTT_PORT);
 
+  setupSettingStructs();
+
   heaterRel.setup();
   heaterPWM.setup();
 
@@ -134,16 +154,9 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length)
   {
     heaterPWM.callback(strTopic, strPayload);
   }
-  if(strTopic == TOPIC_HEATER_REL_CONTROL)
+  if(strTopic.startsWith(TOPIC_BASE_HEATER_RELAIS))
   {
-    if(strPayload == PAYLOAD_HEATER_ON)
-    {
-      heaterRel.turnOn();
-    }
-    else if(strPayload == PAYLOAD_HEATER_OFF)
-    {
-      heaterRel.turnOff();
-    }
+    heaterRel.callback(strTopic, strPayload);
   }
 }
 
@@ -190,7 +203,7 @@ void check_connectivity()
         String buildtime = String(_BuildInfo.date) + "T" + String(_BuildInfo.time);
         client.publish(TOPIC_BOARD_BUILDTIME, buildtime.c_str(), true);
         heaterPWM.setupMQTT();
-        client.subscribe(TOPIC_HEATER_REL_CONTROL);
+        heaterRel.setupMQTT();
         Serial.println("MQTT connected!");
       }
       else
