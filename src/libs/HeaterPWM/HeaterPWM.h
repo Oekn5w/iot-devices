@@ -3,36 +3,39 @@
 
 #include "PubSubClient.h"
 
+namespace Heater
+{
+
+struct HeaterPWMSettings {
+  byte outPin;
+  byte outChannel;
+  bool outActiveHigh = true;
+  bool fbEnable = true;
+  byte fbPin;
+  bool fbActiveHigh = true;
+  bool senseEnable = false;
+  byte sensePin;
+  bool ledEnable = false;
+  byte ledPin;
+  bool ledActiveHigh = true;
+  String topicBase;
+};
+
 class HeaterPWM
 {
   public:
-    struct stPinInfo
-    {
-      byte Pin;
-      bool activeHigh;
-    };
+    HeaterPWM(const HeaterPWMSettings * pSettings, PubSubClient * client);
 
-    struct stHWInfo
-    {
-      HeaterPWM::stPinInfo PWM;
-      byte channel;
-      bool useEnable;
-      HeaterPWM::stPinInfo Enable;
-    };
-
-    HeaterPWM(HeaterPWM::stHWInfo infoHW, String topicBase, PubSubClient * client);
-
-    void callback(String topic, String payload);
+    void callback(String topic, const String & payload);
     void setupMQTT();
 
     void setup();
     void loop();
   private:
     PubSubClient * mqttClient;
-    HeaterPWM::stHWInfo infoHW;
+    const HeaterPWMSettings * pSet;
     unsigned long timeoutPWM;
     unsigned long timeoutSwitch;
-    String topicBase;
     bool bSwitch;
     uint16_t dC_Standby;
     uint16_t dC;
@@ -46,5 +49,6 @@ class HeaterPWM
     void publish();
 };
 
+}
 
 #endif

@@ -2,11 +2,12 @@
 #include "HeaterPWM_config.h"
 #include "HeaterPWM_LUT.h"
 
-HeaterPWM::HeaterPWM(HeaterPWM::stHWInfo infoHW, String topicBase, PubSubClient * client)
+using namespace Heater;
+
+HeaterPWM::HeaterPWM(const HeaterPWMSettings * pSettings, PubSubClient * client)
 {
-  this->infoHW = infoHW;
+  this->pSet = pSettings;
   this->mqttClient = client;
-  this->topicBase = topicBase;
 
   this->dC = 0;
   this->published = false;
@@ -14,12 +15,12 @@ HeaterPWM::HeaterPWM(HeaterPWM::stHWInfo infoHW, String topicBase, PubSubClient 
 
 void HeaterPWM::setup()
 {
-  ledcSetup(this->infoHW.channel, PWM_FREQ, PWM_RES_BITS);
-  ledcAttachPin(this->infoHW.PWM.Pin, this->infoHW.channel);
-  if (this->infoHW.useEnable)
+  ledcSetup(this->pSet->outChannel, PWM_FREQ, PWM_RES_BITS);
+  ledcAttachPin(this->pSet->outPin, this->pSet->outChannel);
+  if (this->pSet->fbEnable)
   { 
-    pinMode(this->infoHW.Enable.Pin, OUTPUT);
-    digitalWrite(this->infoHW.Enable.Pin, this->infoHW.Enable.activeHigh ? 0 : 1);
+    pinMode(this->pSet->fbPin, OUTPUT);
+    digitalWrite(this->pSet->fbPin, this->pSet->fbActiveHigh ? 0 : 1);
   }
   this->bSwitch = false;
   this->timeoutSwitch = 0;
@@ -46,27 +47,27 @@ void HeaterPWM::loop()
   }
 }
 
-void HeaterPWM::callback(String topic, String payload)
+void HeaterPWM::callback(String topic, const String & payload)
 {
-  if (topic.startsWith(this->topicBase))
+  if (topic.startsWith(this->pSet->topicBase))
   {
-    topic = topic.substring(this->topicBase.length());
-    if (topic == HEATER_SWITCH_TOPIC)
+    topic = topic.substring(this->pSet->topicBase.length());
+    if (topic == PWMHEATER_SWITCH_TOPIC)
     {
-      if (payload == HEATER_SWITCH_PAYLOAD_ON)
+      if (payload == PWMHEATER_SWITCH_PAYLOAD_ON)
       {
         this->processSwitch(true);
       }
-      else if (payload == HEATER_SWITCH_PAYLOAD_OFF)
+      else if (payload == PWMHEATER_SWITCH_PAYLOAD_OFF)
       {
         this->processSwitch(false);
       }
     }
-    else if (topic == HEATER_POWER_TOPIC)
+    else if (topic == PWMHEATER_POWER_TOPIC)
     {
       this->processPower((payload.toFloat()));
     }
-    else if (topic == HEATER_PWM_TOPIC)
+    else if (topic == PWMHEATER_PWM_TOPIC)
     {
       this->processDutyCycle((uint16_t)(payload.toInt()));
     }
@@ -75,13 +76,13 @@ void HeaterPWM::callback(String topic, String payload)
 
 void HeaterPWM::setupMQTT()
 {
-  String tempTopic = this->topicBase + HEATER_SWITCH_TOPIC;
+  String tempTopic = this->pSet->topicBase + PWMHEATER_SWITCH_TOPIC;
   mqttClient->subscribe(tempTopic.c_str());
-  tempTopic = this->topicBase + HEATER_POWER_TOPIC;
+  tempTopic = this->pSet->topicBase + PWMHEATER_POWER_TOPIC;
   mqttClient->subscribe(tempTopic.c_str());
-  tempTopic = this->topicBase + HEATER_PWM_TOPIC;
+  tempTopic = this->pSet->topicBase + PWMHEATER_PWM_TOPIC;
   mqttClient->subscribe(tempTopic.c_str());
-  tempTopic = this->topicBase + HEATER_PWMINFO_TOPIC;
+  tempTopic = this->pSet->topicBase + PWMHEATER_PWMINFO_TOPIC;
   char msg[MSG_BUFFER_SIZE];
   snprintf(msg, MSG_BUFFER_SIZE, "%d", PWM_DC_MAX);
   mqttClient->publish(tempTopic.c_str(), msg, true);
@@ -92,16 +93,16 @@ void HeaterPWM::publish()
   if(mqttClient->connected())
   {
     char msg[MSG_BUFFER_SIZE];
-    String tempTopic = this->topicBase + HEATER_STATE_SWTICH_TOPIC;
+    String tempTopic = this->pSet->topicBase + PWMHEATER_STATE_SWTICH_TOPIC;
     mqttClient->publish(tempTopic.c_str(),
-        this->bSwitch ? HEATER_SWITCH_PAYLOAD_ON : HEATER_SWITCH_PAYLOAD_OFF,
+        this->bSwitch ? PWMHEATER_SWITCH_PAYLOAD_ON : PWMHEATER_SWITCH_PAYLOAD_OFF,
         true);
     
-    tempTopic = this->topicBase + HEATER_STATE_PWM_TOPIC;
+    tempTopic = this->pSet->topicBase + PWMHEATER_STATE_PWM_TOPIC;
     snprintf(msg, MSG_BUFFER_SIZE, "%d", this->dC_Standby);
     mqttClient->publish(tempTopic.c_str(), msg, true);
     
-    tempTopic = this->topicBase + HEATER_STATE_ACT_TOPIC;
+    tempTopic = this->pSet->topicBase + PWMHEATER_STATE_ACT_TOPIC;
     snprintf(msg, MSG_BUFFER_SIZE, "%d", this->dC);
     mqttClient->publish(tempTopic.c_str(), msg, true);
     
@@ -183,44 +184,44 @@ void HeaterPWM::actuateNewDC(uint16_t dutyCycle)
     #else // PWM_ALWAYS
     if (dCToApply && dCToApply < PWM_DC_CAP_LOW) dCToApply = PWM_DC_CAP_LOW;
     #endif // PWM_ALWAYS
-    if (this->infoHW.PWM.activeHigh)
+    if (this->pSet->outActiveHigh)
     {
-      ledcWrite(this->infoHW.channel, dCToApply);
+      ledcWrite(this->pSet->outChannel, dCToApply);
     }
     else
     {
-      ledcWrite(this->infoHW.channel, PWM_DC_MAX - dCToApply);
+      ledcWrite(this->pSet->outChannel, PWM_DC_MAX - dCToApply);
     }
-    if (this->infoHW.useEnable)
+    if (this->pSet->fbEnable)
     {
       if (dCToApply > 0)
       {
-        digitalWrite(this->infoHW.Enable.Pin, this->infoHW.Enable.activeHigh ? 1 : 0);
+        digitalWrite(this->pSet->fbPin, this->pSet->fbActiveHigh ? 1 : 0);
       }
       else
       {
-        digitalWrite(this->infoHW.Enable.Pin, this->infoHW.Enable.activeHigh ? 0 : 1);
+        digitalWrite(this->pSet->fbPin, this->pSet->fbActiveHigh ? 0 : 1);
       }
     }
   #else // PWM_CAPPED
     if (dCToApply >= PWM_DC_FULL_THRESH) dCToApply = PWM_DC_MAX;
-    if (this->infoHW.PWM.activeHigh)
+    if (this->pSet->outActiveHigh)
     {
-      ledcWrite(this->infoHW.channel, dCToApply);
+      ledcWrite(this->pSet->outChannel, dCToApply);
     }
     else
     {
-      ledcWrite(this->infoHW.channel, PWM_DC_MAX - dCToApply);
+      ledcWrite(this->pSet->outChannel, PWM_DC_MAX - dCToApply);
     }
-    if (this->infoHW.useEnable)
+    if (this->pSet->fbEnable)
     {
       if (dCToApply > 0)
       {
-        digitalWrite(this->infoHW.Enable.Pin, this->infoHW.Enable.activeHigh ? 1 : 0);
+        digitalWrite(this->pSet->fbPin, this->pSet->fbActiveHigh ? 1 : 0);
       }
       else
       {
-        digitalWrite(this->infoHW.Enable.Pin, this->infoHW.Enable.activeHigh ? 0 : 1);
+        digitalWrite(this->pSet->fbPin, this->pSet->fbActiveHigh ? 0 : 1);
       }
     }
   #endif // PWM_CAPPED
