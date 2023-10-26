@@ -41,12 +41,12 @@ void HeaterRelais::loop()
   }
 }
 
-void HeaterRelais::callback(String topic, String payload)
+void HeaterRelais::callback(String topic, const String & payload)
 {
   if (topic.startsWith(this->pSet->topicBase))
   {
     topic = topic.substring(this->pSet->topicBase.length());
-    if (topic == TOPIC_HEATER_REL_CMD)
+    if (topic == RELHEATER_CMD_TOPIC)
     {
       if (payload == PAYLOAD_HEATER_ON)
       {
@@ -62,7 +62,7 @@ void HeaterRelais::callback(String topic, String payload)
 
 void HeaterRelais::setupMQTT()
 {
-  String tempTopic = this->topicBase + SUBTOPIC_HEATER_REL_CMD;
+  String tempTopic = this->pSet->topicBase + RELHEATER_CMD_TOPIC;
   mqttClient->subscribe(tempTopic.c_str());
 }
 
@@ -70,8 +70,8 @@ void HeaterRelais::publish()
 {
   if(mqttClient->connected())
   {
-    String tempTopic = this->pSet->topicBase + SUBTOPIC_HEATER_REL_STATE;
-    mqttClient->publish(topicStatus.c_str(), this->state ? PAYLOAD_HEATER_ON : PAYLOAD_HEATER_OFF, true);
+    String tempTopic = this->pSet->topicBase + RELHEATER_STATE_TOPIC;
+    mqttClient->publish(tempTopic.c_str(), this->state ? PAYLOAD_HEATER_ON : PAYLOAD_HEATER_OFF, true);
     this->statePublished = true;
   }
   else

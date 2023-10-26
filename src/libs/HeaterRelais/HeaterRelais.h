@@ -9,10 +9,10 @@ namespace Heater
 struct HeaterRelaisSettings {
   byte switchPin;
   bool switchActiveHigh = true;
-  String topicBase;
   bool ledEnable = false;
   byte ledPin;
   bool ledActiveHigh = true;
+  String topicBase;
 };
 
 class HeaterRelais
@@ -20,7 +20,7 @@ class HeaterRelais
   public:
     HeaterRelais(const HeaterRelaisSettings * pSettings, PubSubClient * client);
 
-    void callback(String topic, String payload);
+    void callback(String topic, const String & payload);
     void setupMQTT();
 
     void turnOn();

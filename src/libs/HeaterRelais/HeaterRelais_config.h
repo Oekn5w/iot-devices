@@ -3,5 +3,5 @@
 #define PAYLOAD_HEATER_ON "ON"
 #define PAYLOAD_HEATER_OFF "OFF"
 
-#define SUBTOPIC_HEATER_REL_CMD "/set"
-#define SUBTOPIC_HEATER_REL_STATE "/state"
+#define RELHEATER_CMD_TOPIC "/set"
+#define RELHEATER_STATE_TOPIC "/state"
