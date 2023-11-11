@@ -52,8 +52,8 @@ void ImpulseCounter::handleInput()
 void ImpulseCounter::callback(String topic, const String & payload)
 {
   this->counterVal = payload.toDouble();
-  this->counterValPublished = this->counterVal;
   this->unsubMQTT();
+  this->publishValue(true);
 }
 
 void ImpulseCounter::setupMQTT()
