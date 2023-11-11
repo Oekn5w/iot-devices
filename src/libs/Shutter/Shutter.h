@@ -75,7 +75,7 @@ class Shutter
     Shutter(stPins Pins, stTimings Timings, String topicBase,
         PubSubClient* client, float motorValueMax = SHUTTER_MOTOR_SHUTOFF_DEFAULT);
 
-    void callback(String topic, String payload);
+    void callback(String topic, const String & payload);
     void setupMQTT();
     void handleInput();
 

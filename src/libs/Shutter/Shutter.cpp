@@ -13,7 +13,7 @@ Shutter::Shutter(stPins Pins, stTimings Timings, String topicBase,
   this->mqttClient = client;
 }
 
-void Shutter::callback(String topic, String payload)
+void Shutter::callback(String topic, const String & payload)
 {
   if (this->timeoutConfidenceSubscription && topic == (this->topicBase + SHUTTER_TOPIC_POSITION_PUBLISH_DETAILED))
   {
