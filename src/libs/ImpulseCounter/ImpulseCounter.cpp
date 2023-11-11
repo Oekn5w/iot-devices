@@ -69,7 +69,7 @@ void ImpulseCounter::setupMQTT()
   }
   else
   {
-    String tempTopic = this->pSet->topicBase + IMPULSECOUNTER_VALUE_TOPIC;
+    String tempTopic = this->pSet->topicBase + IMPULSECOUNTER_VALUE_DETAILED_TOPIC;
     this->listening = true;
     this->initTimeout = millis() + IMPULSECOUNTER_MQTT_SUBSCRIPTION_RETAIN_TIMEOUT;
     mqttClient->subscribe(tempTopic.c_str());
@@ -78,7 +78,7 @@ void ImpulseCounter::setupMQTT()
 
 void ImpulseCounter::unsubMQTT()
 {
-  String tempTopic = this->pSet->topicBase + IMPULSECOUNTER_VALUE_TOPIC;
+  String tempTopic = this->pSet->topicBase + IMPULSECOUNTER_VALUE_DETAILED_TOPIC;
   mqttClient->unsubscribe(tempTopic.c_str());
   this->listening = false;
   this->initTimeout = 0;
@@ -104,6 +104,9 @@ void ImpulseCounter::publishValue(bool checkConnectivity)
     String tempTopic = this->pSet->topicBase + IMPULSECOUNTER_VALUE_TOPIC;
     char payload[MSG_BUFFER_SIZE];
     snprintf(payload, MSG_BUFFER_SIZE, this->pSet->formatter.c_str(), this->counterVal);
+    mqttClient->publish(tempTopic.c_str(), payload, true);
+    tempTopic = this->pSet->topicBase + IMPULSECOUNTER_VALUE_DETAILED_TOPIC;
+    snprintf(payload, MSG_BUFFER_SIZE, "%.5f", this->counterVal);
     mqttClient->publish(tempTopic.c_str(), payload, true);
     this->counterValPublished = this->counterVal;
   }
