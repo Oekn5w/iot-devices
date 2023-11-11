@@ -6,9 +6,9 @@
 
 #include "WiFi.h"
 #include "PubSubClient.h"
-#include "Thermistor.h"
 #include "Heater.h"
 #include "HeaterPWM.h"
+#include "ImpulseCounter.h"
 
 // not including the two headers here makes it failing to find them,
 // might be solved with #110 on makeEspArduino
@@ -23,6 +23,20 @@ PubSubClient client(espclient);
 
 Heater heaterRel(21, TOPIC_HEATER_REL_STATUS, &client);
 HeaterPWM heaterPWM({{2, true}, 0, true, {12, true}}, TOPIC_BASE_HEATER_PWM, &client);
+
+struct ImpulseCounterSettings counterGasSet;
+ImpulseCounter counterGas(&counterGasSet, &client);
+
+void setupSettingStructs()
+{
+  counterGasSet.inPin = 0;
+  counterGasSet.incValue = 0.001;
+  counterGasSet.inPullup = true;
+  counterGasSet.formatter = "%.2f";
+  counterGasSet.topicBase = TOPIC_BASE_COUNTER_GAS;
+  counterGasSet.ledEnable = false;
+  counterGasSet.ledPin = 14;
+}
 
 void mqtt_callback(char* topic, byte* payload, unsigned int length);
 void check_connectivity();
@@ -92,12 +106,16 @@ void setup()
 
   client.setServer(SECRET_MQTT_HOST, SECRET_MQTT_PORT);
 
+  setupSettingStructs();
+
   heaterRel.setup();
   heaterPWM.setup();
 
+  counterGas.setup();
+
   SETUP_DISABLE_LED(13); // PWM
   SETUP_DISABLE_LED(27); // WW
-  SETUP_DISABLE_LED(12); // Gas
+  SETUP_DISABLE_LED(14); // Gas
   SETUP_DISABLE_LED(19); // Temp_1
   SETUP_DISABLE_LED(5);  // Temp_2
   SETUP_DISABLE_LED(17); // Temp_3
@@ -120,6 +138,8 @@ void loop()
   heaterRel.loop();
   heaterPWM.loop();
 
+  counterGas.loop();
+
   delay(50);
 }
 
@@ -134,7 +154,7 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length)
   {
     heaterPWM.callback(strTopic, strPayload);
   }
-  if(strTopic == TOPIC_HEATER_REL_CONTROL)
+  else if(strTopic == TOPIC_HEATER_REL_CONTROL)
   {
     if(strPayload == PAYLOAD_HEATER_ON)
     {
@@ -144,6 +164,10 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length)
     {
       heaterRel.turnOff();
     }
+  }
+  else if(strTopic.startsWith(TOPIC_BASE_COUNTER_GAS))
+  {
+    counterGas.callback(strTopic, strPayload);
   }
 }
 
@@ -191,6 +215,7 @@ void check_connectivity()
         client.publish(TOPIC_BOARD_BUILDTIME, buildtime.c_str(), true);
         heaterPWM.setupMQTT();
         client.subscribe(TOPIC_HEATER_REL_CONTROL);
+        counterGas.setupMQTT();
         Serial.println("MQTT connected!");
       }
       else
