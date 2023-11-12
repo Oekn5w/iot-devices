@@ -29,9 +29,9 @@ ImpulseCounter counterGas(&counterGasSet, &client);
 
 void setupSettingStructs()
 {
-  counterGasSet.inPin = 0;
-  counterGasSet.incValue = 0.001;
-  counterGasSet.inPullup = true;
+  counterGasSet.inPin = 26;
+  counterGasSet.incValue = 0.01;
+  counterGasSet.inPullup = false;
   counterGasSet.formatter = "%.2f";
   counterGasSet.topicBase = TOPIC_BASE_COUNTER_GAS;
   counterGasSet.ledEnable = false;
