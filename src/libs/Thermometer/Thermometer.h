@@ -2,50 +2,63 @@
 #define thermometer_h
 
 #include "PubSubClient.h"
-#include "Thermometer_config.h"
 #include "nonBlockingDT.h"
-
-#define MAX_LENGTH_THERM_ (20)
 
 namespace Thermometer
 {
-  struct SingleEntry {
-    
-  }
-
-  struct Single {
-    String ID;
-    String topic;
+  struct sDevInfo {
+    String address;
     float publishedTemperature;
-  }
+  };
+
+  enum eWireState {
+    IDLE, WAITING, ABORTED
+  };
 
   class Wire {
     public:
-      Wire(byte GPIO_Bus, String base_topic, PubSubClient * mqttClient);
+      Wire(byte GPIO_Bus, String base_topic, PubSubClient * mqttClient, unsigned int idBus);
       void setup();
       void loop();
-      void 
+      void readTemperatures();
+      void planRescan();
     private:
       OneWire wire;
       nonBlockingDT sensors;
 
-      String base_topic;
-      unsigned long next_query;
+      String baseTopicDev;
+      String baseTopicBus;
+      unsigned int idBus;
       PubSubClient* mqttClient;
-  }
+      eWireState wireState;
+      sDevInfo* devInfo = nullptr;
+
+      bool readingPending;
+      bool rescanPending;
+      void publishBus();
+      void publishSensors();
+
+      bool busInfoToPublish;
+      bool sensorToPublish;
+      
+      uint64_t timeConvStart;
+      uint32_t numSensors;
+  };
 
   class MultiWire {
     public:
       MultiWire(byte* GPIO_Busses, unsigned int N_Busses, String base_topic, PubSubClient * mqttClient);
+      void callback(String topic, const String & payload);
+      void setupMQTT();
       void setup();
       void loop();
     private:
-      Wire* Busses;
+      Wire* Busses = nullptr;
       unsigned int N_Busses;
-      String base_topic;
+      String topicBase;
       unsigned long next_query;
       PubSubClient* mqttClient;
-  }
+  };
 
 }
 

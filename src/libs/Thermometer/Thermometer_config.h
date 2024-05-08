@@ -1,6 +1,6 @@
-#ifndef thermometer_conf_h
-#define thermometer_conf_h
+#define THERMO_SUBTOPIC_DEV "/devices"
+#define THERMO_SUBTOPIC_BUS "/busses"
+#define THERMO_SUBTOPIC_RESCAN "/rescan"
 
-
-
-#endif
+#define THERMO_SENSOR_TIMEOUT (5000)
+#define THERMO_RESOLUTION (9)
