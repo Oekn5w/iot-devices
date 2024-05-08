@@ -8,6 +8,10 @@ uint8_t nonBlockingDT::begin(uint8_t defaultResolution = 9) {
 	DallasTemperature::begin();
 	DallasTemperature::setWaitForConversion(false);
 	numTempSensors = 0;
+	if (infoPtr) {
+		free(infoPtr);
+		infoPtr = nullptr;
+	}
 	parasiteMode = DallasTemperature::isParasitePowerMode();
 	numTempSensors = DallasTemperature::getDS18Count();
 	if (numTempSensors == 0) {

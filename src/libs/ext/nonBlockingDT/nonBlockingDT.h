@@ -16,12 +16,9 @@ struct tempSensorInfo {
 	boolean readingPending;
 };
 
-enum nonBlockingStates {
-	IDLE, WAITING_FOR_CONVERSION, ABORTED
-};
-
 class nonBlockingDT: public DallasTemperature {
 public:
+	nonBlockingDT() { }
 	nonBlockingDT(OneWire *w) :
 			DallasTemperature(w) {
 	}
@@ -49,7 +46,7 @@ private:
 	uint8_t numTempSensors;
 	uint32_t waitTime;
 	uint32_t conversionStartTime;
-	tempSensorInfo *infoPtr;
+	tempSensorInfo *infoPtr = nullptr;
 	void updateTemps();
 };
 
