@@ -152,7 +152,7 @@ void Thermometer::Wire::publishSensors()
   }
 }
 
-Thermometer::MultiWire::MultiWire(byte* GPIO_Busses, unsigned int N_Busses, String base_topic, PubSubClient * mqttClient)
+Thermometer::MultiWire::MultiWire(byte* GPIO_Busses, unsigned int N_Busses, String base_topic, PubSubClient * mqttClient, unsigned long queryInterval = 0)
 {
   this->Busses = (Wire*) malloc(N_Busses * sizeof(Wire));
 
@@ -163,7 +163,17 @@ Thermometer::MultiWire::MultiWire(byte* GPIO_Busses, unsigned int N_Busses, Stri
 
   for (unsigned int i = 0; i < N_Busses; ++i)
   {
-    this->Busses[i] = Wire(GPIO_Busses[i], base_topic, mqttClient);
+    this->Busses[i] = Wire(GPIO_Busses[i], base_topic, mqttClient, i);
+  }
+
+  this->queryInterval = queryInterval;
+}
+
+void Thermometer::MultiWire::readTemperatures()
+{
+  for (unsigned int i = 0; i < this->N_Busses; ++i)
+  {
+    this->Busses[i].readTemperatures();
   }
 }
 
@@ -173,6 +183,10 @@ void Thermometer::MultiWire::setup()
   {
     this->Busses[i].setup();
   }
+  if (this->queryInterval)
+  {
+    this->next_query = millis() + this->queryInterval;
+  }
 }
 
 void Thermometer::MultiWire::loop()
@@ -180,6 +194,21 @@ void Thermometer::MultiWire::loop()
   for (unsigned int i = 0; i < this->N_Busses; ++i)
   {
     this->Busses[i].loop();
+  }
+  if (this->next_query && millis() > this->next_query)
+  {
+    this->readTemperatures();
+    if (this->queryInterval)
+    {
+      while (millis() > this->next_query)
+      {
+        this->next_query += this->queryInterval;
+      }
+    }
+    else
+    {
+      this->next_query = 0;
+    }
   }
 }
 
@@ -193,6 +222,10 @@ void Thermometer::MultiWire::callback(String topic, const String & payload)
       for (unsigned int i = 0; i < this->N_Busses; ++i)
       {
         this->Busses[i].planRescan();
+      }
+      if (this->queryInterval)
+      {
+        this->next_query = millis() + this->queryInterval;
       }
     }
   }

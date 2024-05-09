@@ -47,8 +47,9 @@ namespace Thermometer
 
   class MultiWire {
     public:
-      MultiWire(byte* GPIO_Busses, unsigned int N_Busses, String base_topic, PubSubClient * mqttClient);
+      MultiWire(byte* GPIO_Busses, unsigned int N_Busses, String base_topic, PubSubClient * mqttClient, unsigned long queryInterval);
       void callback(String topic, const String & payload);
+      void readTemperatures();
       void setupMQTT();
       void setup();
       void loop();
@@ -57,6 +58,7 @@ namespace Thermometer
       unsigned int N_Busses;
       String topicBase;
       unsigned long next_query;
+      unsigned long queryInterval;
       PubSubClient* mqttClient;
   };
 
