@@ -154,7 +154,8 @@ void Thermometer::singleBus::publishBus()
       }
     }
     temp += "]";
-    mqttClient->publish(this->baseTopicBus, temp.c_str(), true);
+    boolean pubSuccess = mqttClient->publish(this->baseTopicBus, temp.c_str(), true);
+    if (!pubSuccess) { return; }
     this->busInfoToPublish = false;
   }
 }
@@ -164,6 +165,7 @@ void Thermometer::singleBus::publishSensors()
   if(this->sensorToPublish && this->mqttClient->connected())
   {
     float temperature;
+    boolean pubSuccess;
     for(uint32_t i = 0; i < this->numSensors; ++i)
     {
       memcpy(baseTopicDev + baseTopicDevIdxAddr, devInfo[i].address, 16);
@@ -179,7 +181,8 @@ void Thermometer::singleBus::publishSensors()
         {
           snprintf(msg, MSG_BUFFER_SIZE, "%.1f", temperature);
         }
-        mqttClient->publish(this->baseTopicDev, msg, true);
+        pubSuccess = mqttClient->publish(this->baseTopicDev, msg, true);
+        if(!pubSuccess) { return; }
         this->devInfo[i].publishedTemperature = temperature;
       }
     }
