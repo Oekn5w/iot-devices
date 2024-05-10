@@ -5,13 +5,7 @@
 
 #include "DallasTemperature.h"
 
-#if ARDUINO >= 100
 #include "Arduino.h"
-#else
-extern "C" {
-#include "WConstants.h"
-}
-#endif
 
 // OneWire commands
 #define STARTCONVO      0x44  // Tells device to take a temperature reading and put it on the scratchpad
@@ -111,11 +105,13 @@ void DallasTemperature::begin(void) {
 	ds18Count = 0; // Reset number of DS18xxx Family devices
 
 	while (_wire->search(deviceAddress)) {
-
+		Serial.println(F("DT: found sth"));
 		if (validAddress(deviceAddress)) {
 			devices++;
+			Serial.println(F("DT: addr valid"));
 
 			if (validFamily(deviceAddress)) {
+				Serial.println(F("DT: DS family"));
 				ds18Count++;
 
 				if (!parasite && readPowerSupply(deviceAddress))

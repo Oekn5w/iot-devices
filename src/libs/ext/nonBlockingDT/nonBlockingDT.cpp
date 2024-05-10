@@ -1,35 +1,26 @@
 // Do not remove the include below
 #include "nonBlockingDT.h"
+#include <Arduino.h>
 
 uint8_t nonBlockingDT::begin(uint8_t defaultResolution = 9) {
 	uint8_t index1, index2;
 	DeviceAddress addr;
 
+	Serial.println(F("nBlDT: begin"));
 	DallasTemperature::begin();
 	DallasTemperature::setWaitForConversion(false);
 	numTempSensors = 0;
-	if (infoPtr) {
-		free(infoPtr);
-		infoPtr = nullptr;
-	}
 	parasiteMode = DallasTemperature::isParasitePowerMode();
 	numTempSensors = DallasTemperature::getDS18Count();
 	if (numTempSensors == 0) {
 		return 0;
 	}
-
-	// Get memory space for the number of temp sensors located
-	infoPtr = (tempSensorInfo *) malloc(
-			numTempSensors * sizeof(tempSensorInfo));
-	if (infoPtr == NULL) {
-		return 0;
-	}
+	Serial.println(F("nBlDT: First thresh"));
 
 	// Run through OneWire indexes again and get addresses for the DS18xxx-type devices
 	index2 = 0;
 	for (index1 = 0; index1 < DallasTemperature::getDeviceCount(); index1++) {
 		if (!DallasTemperature::getAddress(addr, index1)) {
-			free(infoPtr);
 			return 0;
 		}
 		if (DallasTemperature::validFamily(addr)) {
@@ -41,8 +32,10 @@ uint8_t nonBlockingDT::begin(uint8_t defaultResolution = 9) {
 			(infoPtr + index2)->oneWireIndex = index1;
 			(infoPtr + index2)->readingPending = false;
 			index2++;
+			if (index2 == MAX_NBL_SENS) { break; }
 		}
 	}
+	if (numTempSensors > MAX_NBL_SENS) { numTempSensors = MAX_NBL_SENS; }
 
 	conversionInProcess = false;
 	return numTempSensors;

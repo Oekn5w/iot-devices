@@ -5,6 +5,12 @@
 
 // Platform specific I/O register type
 
+#if ESP32 > 0
+#define ARDUINO_ARCH_ESP32
+#else
+#define ARDUINO_ARCH_ESP8266
+#endif
+
 #if defined(__AVR__)
 #define IO_REG_TYPE uint8_t
 

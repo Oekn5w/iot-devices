@@ -7,6 +7,12 @@
 
 #include <stdint.h>
 
+#if ESP32 > 0
+#define ARDUINO_ARCH_ESP32
+#else
+#define ARDUINO_ARCH_ESP8266
+#endif
+
 // Platform specific I/O definitions
 
 #if defined(__AVR__)

@@ -1,12 +1,13 @@
 #include "Thermometer_config.h"
 #include "Thermometer.h"
+#include <Arduino.h>
 
 #define MSG_BUFFER_SIZE	(15)
 
 Thermometer::Wire::Wire(byte GPIO_Bus, String base_topic, PubSubClient * mqttClient, unsigned int idBus = 0)
 {
   this->wire = OneWire(GPIO_Bus);
-  this->sensors = nonBlockingDT(&this->wire);
+  this->sensors = nonBlockingDT(&(this->wire));
 
   this->baseTopicDev = base_topic + THERMO_SUBTOPIC_DEV;
   this->baseTopicBus = base_topic + THERMO_SUBTOPIC_BUS + "/" + String(idBus);
@@ -23,12 +24,9 @@ Thermometer::Wire::Wire(byte GPIO_Bus, String base_topic, PubSubClient * mqttCli
 void Thermometer::Wire::setup()
 {
   this->numSensors = this->sensors.begin(THERMO_RESOLUTION);
-  if (this->devInfo)
-  {
-    free(this->devInfo);
-    this->devInfo = nullptr;
-  }
-  this->devInfo = (sDevInfo*) malloc(this->numSensors * sizeof(sDevInfo));
+  if (this->numSensors > MAX_NUM_SENS_p_B) { this->numSensors = MAX_NUM_SENS_p_B; }
+  Serial.print(F("nonblocking Setup: Number of sensors: "));
+  Serial.println(this->numSensors);
   DeviceAddress addr;
   char temp[17];
   for(uint32_t i = 0; i < this->numSensors; ++i)
@@ -61,6 +59,7 @@ void Thermometer::Wire::loop()
     case WAITING:
       if (this->sensors.isConversionDone())
       {
+        // Serial.println(F("Conversion Done"));
         this->sensorToPublish = true;
         this->wireState = IDLE;
       }
@@ -76,6 +75,7 @@ void Thermometer::Wire::loop()
       }
       else if (this->readingPending)
       {
+        // Serial.println(F("Conversion started"));
         this->wireState = WAITING;
         this->timeConvStart = millis();
         if (!this->sensors.startConvertion())
@@ -118,7 +118,7 @@ void Thermometer::Wire::publishBus()
       }
     }
     temp += "]";
-
+    mqttClient->publish(this->baseTopicBus.c_str(), temp.c_str(), true);
     this->busInfoToPublish = false;
   }
 }
@@ -154,12 +154,11 @@ void Thermometer::Wire::publishSensors()
 
 Thermometer::MultiWire::MultiWire(byte* GPIO_Busses, unsigned int N_Busses, String base_topic, PubSubClient * mqttClient, unsigned long queryInterval = 0)
 {
-  this->Busses = (Wire*) malloc(N_Busses * sizeof(Wire));
-
   this->topicBase = base_topic;
   this->mqttClient = mqttClient;
 
   this->N_Busses = N_Busses;
+  if (this->N_Busses > MAX_NUM_BUSSES) { this->N_Busses = MAX_NUM_BUSSES; }
 
   for (unsigned int i = 0; i < N_Busses; ++i)
   {

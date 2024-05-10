@@ -3,6 +3,7 @@
 
 #include "PubSubClient.h"
 #include "nonBlockingDT.h"
+#include "Thermometer_config.h"
 
 namespace Thermometer
 {
@@ -17,6 +18,7 @@ namespace Thermometer
 
   class Wire {
     public:
+      Wire() { }
       Wire(byte GPIO_Bus, String base_topic, PubSubClient * mqttClient, unsigned int idBus);
       void setup();
       void loop();
@@ -31,7 +33,7 @@ namespace Thermometer
       unsigned int idBus;
       PubSubClient* mqttClient;
       eWireState wireState;
-      sDevInfo* devInfo = nullptr;
+      sDevInfo devInfo[MAX_NUM_SENS_p_B];
 
       bool readingPending;
       bool rescanPending;
@@ -54,7 +56,7 @@ namespace Thermometer
       void setup();
       void loop();
     private:
-      Wire* Busses = nullptr;
+      Wire Busses[MAX_NUM_BUSSES];
       unsigned int N_Busses;
       String topicBase;
       unsigned long next_query;

@@ -390,6 +390,7 @@ bool OneWire::search(uint8_t *newAddr, bool search_mode /* = true */)
          LastDiscrepancy = 0;
          LastDeviceFlag = false;
          LastFamilyDiscrepancy = 0;
+         Serial.println("OW: reset " + __LINE__);
          return false;
       }
 

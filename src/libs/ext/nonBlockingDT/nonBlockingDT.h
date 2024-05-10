@@ -9,6 +9,8 @@
 #include "Arduino.h"
 #include <DallasTemperature.h>
 
+#define MAX_NBL_SENS (10)
+
 struct tempSensorInfo {
 	DeviceAddress oneWireAddress;
 	int16_t lastReadingRaw;
@@ -21,11 +23,6 @@ public:
 	nonBlockingDT() { }
 	nonBlockingDT(OneWire *w) :
 			DallasTemperature(w) {
-	}
-	~nonBlockingDT() {
-		if (infoPtr) {
-			free(infoPtr);
-		}
 	}
 	void getAddressFromTempSensorIndex(DeviceAddress addr, uint8_t tempSensorIndex);
 	void setUseConversionTimer(boolean state);
@@ -46,7 +43,7 @@ private:
 	uint8_t numTempSensors;
 	uint32_t waitTime;
 	uint32_t conversionStartTime;
-	tempSensorInfo *infoPtr = nullptr;
+	tempSensorInfo infoPtr[MAX_NBL_SENS];
 	void updateTemps();
 };
 
