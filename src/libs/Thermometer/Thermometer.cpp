@@ -23,12 +23,12 @@ void Thermometer::singleBus::init(byte GPIO_Bus, const String & base_topic, PubS
   this->refDT = DallasTemperature(&this->refWire);
   this->sensors = nonBlockingDT(&this->refDT);
   uint16_t lenBaseTopic = base_topic.length();
-  memset(baseTopicDev,0,LENGTH_DEV);
+  memset(baseTopicDev,0,THERMO_LENGTH_DEVICE);
   this->baseTopicDevIdxAddr = lenBaseTopic + (sizeof(THERMO_SUBTOPIC_DEV) - 1) + 1;
   strcpy(baseTopicDev,base_topic.c_str());
   strcat(baseTopicDev,THERMO_SUBTOPIC_DEV THERMO_DEV_ADD);
 
-  memset(baseTopicBus,0,LENGTH_BUS);
+  memset(baseTopicBus,0,THERMO_LENGTH_BUS);
   strcpy(baseTopicBus,base_topic.c_str());
   strcat(baseTopicBus,THERMO_SUBTOPIC_BUS THERMO_BUS_ADD);
   sprintf(baseTopicBus + lenBaseTopic + (sizeof(THERMO_SUBTOPIC_BUS) - 1) + 1, "%d", idBus);

@@ -33,9 +33,9 @@ namespace Thermometer
       DallasTemperature refDT;
       nonBlockingDT sensors;
 
-      char baseTopicDev[LENGTH_DEV];
+      char baseTopicDev[THERMO_LENGTH_DEVICE];
       uint16_t baseTopicDevIdxAddr;
-      char baseTopicBus[LENGTH_BUS];
+      char baseTopicBus[THERMO_LENGTH_BUS];
       unsigned int idBus;
       PubSubClient* mqttClient;
       eWireState wireState;
