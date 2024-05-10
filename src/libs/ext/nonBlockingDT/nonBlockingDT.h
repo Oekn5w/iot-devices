@@ -16,11 +16,11 @@ struct tempSensorInfo {
 	boolean readingPending;
 };
 
-class nonBlockingDT: public DallasTemperature {
+class nonBlockingDT {
 public:
-	nonBlockingDT() { }
-	nonBlockingDT(OneWire *w) :
-			DallasTemperature(w) {
+	nonBlockingDT() {}
+	nonBlockingDT(DallasTemperature *w) :
+			ptrDT(w) {
 	}
 	~nonBlockingDT() {
 		if (infoPtr) {
@@ -40,6 +40,7 @@ public:
 	float getLatestTempF(uint8_t tempSensorIndex);
 
 private:
+	DallasTemperature *ptrDT = nullptr;
 	boolean parasiteMode;
 	boolean conversionInProcess;
 	boolean useConversionTimer = true;
