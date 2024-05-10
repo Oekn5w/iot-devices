@@ -3,13 +3,35 @@
 
 #define MSG_BUFFER_SIZE	(15)
 
-Thermometer::Wire::Wire(byte GPIO_Bus, String base_topic, PubSubClient * mqttClient, unsigned int idBus = 0)
+Thermometer::singleBus::singleBus(byte GPIO_Bus, const String & base_topic, PubSubClient * mqttClient, unsigned int idBus /*= 0*/)
 {
-  this->wire = OneWire(GPIO_Bus);
-  this->sensors = nonBlockingDT(&this->wire);
+  this->init(GPIO_Bus, base_topic, mqttClient, idBus);
+}
 
-  this->baseTopicDev = base_topic + THERMO_SUBTOPIC_DEV;
-  this->baseTopicBus = base_topic + THERMO_SUBTOPIC_BUS + "/" + String(idBus);
+Thermometer::singleBus::~singleBus()
+{
+  if (this->devInfo)
+  {
+    free(this->devInfo);
+    this->devInfo = nullptr;
+  }
+}
+
+void Thermometer::singleBus::init(byte GPIO_Bus, const String & base_topic, PubSubClient * mqttClient, unsigned int idBus /*= 0*/)
+{
+  this->refWire.begin(GPIO_Bus);
+  this->refDT = DallasTemperature(&this->refWire);
+  this->sensors = nonBlockingDT(&this->refDT);
+  uint16_t lenBaseTopic = base_topic.length();
+  memset(baseTopicDev,0,LENGTH_DEV);
+  this->baseTopicDevIdxAddr = lenBaseTopic + (sizeof(THERMO_SUBTOPIC_DEV) - 1) + 1;
+  strcpy(baseTopicDev,base_topic.c_str());
+  strcat(baseTopicDev,THERMO_SUBTOPIC_DEV THERMO_DEV_ADD);
+
+  memset(baseTopicBus,0,LENGTH_BUS);
+  strcpy(baseTopicBus,base_topic.c_str());
+  strcat(baseTopicBus,THERMO_SUBTOPIC_BUS THERMO_BUS_ADD);
+  sprintf(baseTopicBus + lenBaseTopic + (sizeof(THERMO_SUBTOPIC_BUS) - 1) + 1, "%d", idBus);
   this->mqttClient = mqttClient;
 
   this->readingPending = false;
@@ -20,7 +42,23 @@ Thermometer::Wire::Wire(byte GPIO_Bus, String base_topic, PubSubClient * mqttCli
   this->timeConvStart = 0;
 }
 
-void Thermometer::Wire::setup()
+void* Thermometer::singleBus::operator new(unsigned int size)
+{
+  void * p;
+  p = malloc(size);
+  memset((Thermometer::singleBus*)p,0,size);
+  *((Thermometer::singleBus*)p) = Thermometer::singleBus();
+  return (Thermometer::singleBus*) p;
+}
+
+void Thermometer::singleBus::operator delete(void* p)
+{
+  singleBus* pNss = (singleBus*) p;
+  pNss->~singleBus();
+  free(p);
+}
+
+void Thermometer::singleBus::setup()
 {
   this->numSensors = this->sensors.begin(THERMO_RESOLUTION);
   if (this->devInfo)
@@ -30,11 +68,10 @@ void Thermometer::Wire::setup()
   }
   this->devInfo = (sDevInfo*) malloc(this->numSensors * sizeof(sDevInfo));
   DeviceAddress addr;
-  char temp[17];
   for(uint32_t i = 0; i < this->numSensors; ++i)
   {
-    this->sensors.getAddress(addr, i);
-    snprintf(temp, 17, "%02X%02X%02X%02X%02X%02X%02X%02X",
+    this->sensors.getAddressFromTempSensorIndex(addr, i);
+    snprintf(this->devInfo[i].address, 17, "%02X%02X%02X%02X%02X%02X%02X%02X",
       addr[0],
       addr[1],
       addr[2],
@@ -44,7 +81,6 @@ void Thermometer::Wire::setup()
       addr[6],
       addr[7]
     );
-    this->devInfo[i].address = String(temp);
     this->devInfo[i].publishedTemperature = -1.0f;
   }
   this->busInfoToPublish = true;
@@ -54,7 +90,7 @@ void Thermometer::Wire::setup()
   this->readingPending = true;
 }
 
-void Thermometer::Wire::loop()
+void Thermometer::singleBus::loop()
 {
   switch(this->wireState)
   {
@@ -94,17 +130,17 @@ void Thermometer::Wire::loop()
   this->publishSensors();
 }
 
-void Thermometer::Wire::readTemperatures()
+void Thermometer::singleBus::readTemperatures()
 {
   this->readingPending = true;
 }
 
-void Thermometer::Wire::planRescan()
+void Thermometer::singleBus::planRescan()
 {
   this->rescanPending = true;
 }
 
-void Thermometer::Wire::publishBus()
+void Thermometer::singleBus::publishBus()
 {
   if(this->busInfoToPublish && this->mqttClient->connected())
   {
@@ -118,20 +154,19 @@ void Thermometer::Wire::publishBus()
       }
     }
     temp += "]";
-
+    mqttClient->publish(this->baseTopicBus, temp.c_str(), true);
     this->busInfoToPublish = false;
   }
 }
 
-void Thermometer::Wire::publishSensors()
+void Thermometer::singleBus::publishSensors()
 {
   if(this->sensorToPublish && this->mqttClient->connected())
   {
-    String topic;
     float temperature;
     for(uint32_t i = 0; i < this->numSensors; ++i)
     {
-      topic = this->baseTopicDev + this->devInfo[i].address;
+      memcpy(baseTopicDev + baseTopicDevIdxAddr, devInfo[i].address, 16);
       temperature = this->sensors.getLatestTempC(i);
       char msg[MSG_BUFFER_SIZE];
       if (abs(temperature - this->devInfo[i].publishedTemperature) > 0.1f)
@@ -144,7 +179,7 @@ void Thermometer::Wire::publishSensors()
         {
           snprintf(msg, MSG_BUFFER_SIZE, "%.1f", temperature);
         }
-        mqttClient->publish(topic.c_str(), msg, true);
+        mqttClient->publish(this->baseTopicDev, msg, true);
         this->devInfo[i].publishedTemperature = temperature;
       }
     }
@@ -152,9 +187,10 @@ void Thermometer::Wire::publishSensors()
   }
 }
 
-Thermometer::MultiWire::MultiWire(byte* GPIO_Busses, unsigned int N_Busses, String base_topic, PubSubClient * mqttClient, unsigned long queryInterval = 0)
+Thermometer::multiBus::multiBus(byte* GPIO_Busses, unsigned int N_Busses, const String & base_topic, PubSubClient * mqttClient, unsigned long queryInterval)
 {
-  this->Busses = (Wire*) malloc(N_Busses * sizeof(Wire));
+  this->Busses = (singleBus**) malloc(N_Busses * sizeof(singleBus*));
+  memset(this->Busses, 0, N_Busses * sizeof(singleBus*));
 
   this->topicBase = base_topic;
   this->mqttClient = mqttClient;
@@ -163,25 +199,39 @@ Thermometer::MultiWire::MultiWire(byte* GPIO_Busses, unsigned int N_Busses, Stri
 
   for (unsigned int i = 0; i < N_Busses; ++i)
   {
-    this->Busses[i] = Wire(GPIO_Busses[i], base_topic, mqttClient, i);
+    this->Busses[i] = new singleBus;
+    this->Busses[i]->init(GPIO_Busses[i], base_topic, mqttClient, i);
   }
 
   this->queryInterval = queryInterval;
 }
 
-void Thermometer::MultiWire::readTemperatures()
+Thermometer::multiBus::~multiBus()
 {
-  for (unsigned int i = 0; i < this->N_Busses; ++i)
+  if (this->Busses)
   {
-    this->Busses[i].readTemperatures();
+    for (unsigned int i = 0; i < this->N_Busses; ++i)
+    {
+      this->Busses[i]->~singleBus();
+      free(this->Busses[i]);
+    }
+    free(this->Busses);
   }
 }
 
-void Thermometer::MultiWire::setup()
+void Thermometer::multiBus::readTemperatures()
 {
   for (unsigned int i = 0; i < this->N_Busses; ++i)
   {
-    this->Busses[i].setup();
+    this->Busses[i]->readTemperatures();
+  }
+}
+
+void Thermometer::multiBus::setup()
+{
+  for (unsigned int i = 0; i < this->N_Busses; ++i)
+  {
+    this->Busses[i]->setup();
   }
   if (this->queryInterval)
   {
@@ -189,11 +239,11 @@ void Thermometer::MultiWire::setup()
   }
 }
 
-void Thermometer::MultiWire::loop()
+void Thermometer::multiBus::loop()
 {
   for (unsigned int i = 0; i < this->N_Busses; ++i)
   {
-    this->Busses[i].loop();
+    this->Busses[i]->loop();
   }
   if (this->next_query && millis() > this->next_query)
   {
@@ -212,7 +262,7 @@ void Thermometer::MultiWire::loop()
   }
 }
 
-void Thermometer::MultiWire::callback(String topic, const String & payload)
+void Thermometer::multiBus::callback(String topic, const String & payload)
 {
   if (topic.startsWith(this->topicBase))
   {
@@ -221,7 +271,7 @@ void Thermometer::MultiWire::callback(String topic, const String & payload)
     {
       for (unsigned int i = 0; i < this->N_Busses; ++i)
       {
-        this->Busses[i].planRescan();
+        this->Busses[i]->planRescan();
       }
       if (this->queryInterval)
       {
@@ -231,7 +281,7 @@ void Thermometer::MultiWire::callback(String topic, const String & payload)
   }
 }
 
-void Thermometer::MultiWire::setupMQTT()
+void Thermometer::multiBus::setupMQTT()
 {
   String tempTopic = this->topicBase + THERMO_SUBTOPIC_RESCAN;
   mqttClient->subscribe(tempTopic.c_str());

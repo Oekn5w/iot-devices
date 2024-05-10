@@ -3,11 +3,12 @@
 
 #include "PubSubClient.h"
 #include "nonBlockingDT.h"
+#include "Thermometer_config.h"
 
 namespace Thermometer
 {
   struct sDevInfo {
-    String address;
+    char address[17];
     float publishedTemperature;
   };
 
@@ -15,19 +16,26 @@ namespace Thermometer
     IDLE, WAITING, ABORTED
   };
 
-  class Wire {
+  class singleBus {
     public:
-      Wire(byte GPIO_Bus, String base_topic, PubSubClient * mqttClient, unsigned int idBus);
+      singleBus() {}
+      singleBus(byte GPIO_Bus, const String & base_topic, PubSubClient * mqttClient, unsigned int idBus = 0);
+      ~singleBus();
+      void init(byte GPIO_Bus, const String & base_topic, PubSubClient * mqttClient, unsigned int idBus = 0);
+      void* operator new (unsigned int);
+      void operator delete(void*);
       void setup();
       void loop();
       void readTemperatures();
       void planRescan();
     private:
-      OneWire wire;
+      OneWire refWire;
+      DallasTemperature refDT;
       nonBlockingDT sensors;
 
-      String baseTopicDev;
-      String baseTopicBus;
+      char baseTopicDev[LENGTH_DEV];
+      uint16_t baseTopicDevIdxAddr;
+      char baseTopicBus[LENGTH_BUS];
       unsigned int idBus;
       PubSubClient* mqttClient;
       eWireState wireState;
@@ -45,16 +53,17 @@ namespace Thermometer
       uint32_t numSensors;
   };
 
-  class MultiWire {
+  class multiBus {
     public:
-      MultiWire(byte* GPIO_Busses, unsigned int N_Busses, String base_topic, PubSubClient * mqttClient, unsigned long queryInterval);
+      multiBus(byte* GPIO_Busses, unsigned int N_Busses, const String & base_topic, PubSubClient * mqttClient, unsigned long queryInterval);
+      ~multiBus();
       void callback(String topic, const String & payload);
       void readTemperatures();
       void setupMQTT();
       void setup();
       void loop();
     private:
-      Wire* Busses = nullptr;
+      singleBus** Busses = nullptr;
       unsigned int N_Busses;
       String topicBase;
       unsigned long next_query;
