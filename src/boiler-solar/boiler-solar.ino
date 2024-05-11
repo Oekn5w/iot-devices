@@ -9,6 +9,7 @@
 #include "Heater.h"
 #include "HeaterPWM.h"
 #include "ImpulseCounter.h"
+#include "Thermometer.h"
 
 // not including the two headers here makes it failing to find them,
 // might be solved with #110 on makeEspArduino
@@ -26,6 +27,16 @@ HeaterPWM heaterPWM({{2, true}, 0, true, {12, true}}, TOPIC_BASE_HEATER_PWM, &cl
 
 struct ImpulseCounterSettings counterGasSet;
 ImpulseCounter counterGas(&counterGasSet, &client);
+
+byte thermoBusPins[] {22, 18, 16};
+static_assert(sizeof(TOPIC_BASE_THERMO_BUSSES) - 1 <= THERMO_MAX_LEN_BASE_TOPIC);
+Thermometer::multiBus thermoBusses(
+  thermoBusPins,
+  sizeof(thermoBusPins)/sizeof(byte),
+  TOPIC_BASE_THERMO_BUSSES,
+  &client,
+  20000
+);
 
 void setupSettingStructs()
 {
@@ -113,6 +124,8 @@ void setup()
 
   counterGas.setup();
 
+  thermoBusses.setup();
+
   SETUP_DISABLE_LED(13); // PWM
   SETUP_DISABLE_LED(27); // WW
   SETUP_DISABLE_LED(14); // Gas
@@ -140,7 +153,7 @@ void loop()
 
   counterGas.loop();
 
-  delay(50);
+  thermoBusses.loop();
 }
 
 void mqtt_callback(char* topic, byte* payload, unsigned int length)
@@ -168,6 +181,10 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length)
   else if(strTopic.startsWith(TOPIC_BASE_COUNTER_GAS))
   {
     counterGas.callback(strTopic, strPayload);
+  }
+  else if(strTopic.startsWith(TOPIC_BASE_THERMO_BUSSES))
+  {
+    thermoBusses.callback(strTopic, strPayload);
   }
 }
 
@@ -216,6 +233,7 @@ void check_connectivity()
         heaterPWM.setupMQTT();
         client.subscribe(TOPIC_HEATER_REL_CONTROL);
         counterGas.setupMQTT();
+        thermoBusses.setupMQTT();
         Serial.println("MQTT connected!");
       }
       else

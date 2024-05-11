@@ -8,4 +8,6 @@
 #define TOPIC_HEATER_REL_STATUS "boiler-solar/water/rel/status"
 #define TOPIC_BASE_COUNTER_GAS "boiler-solar/gas"
 
+#define TOPIC_BASE_THERMO_BUSSES "boiler-solar/temperatures"
+
 #define MQTT_CLIENT_ID "ESP32-Boiler-Solar"
