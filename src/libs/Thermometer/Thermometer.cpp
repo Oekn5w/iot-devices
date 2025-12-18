@@ -236,9 +236,9 @@ void Thermometer::multiBus::setup()
   {
     this->Busses[i]->setup();
   }
-  if (this->queryInterval)
+  if (this->queryInterval > 0)
   {
-    this->next_query = millis() + this->queryInterval;
+    this->last_query = millis();
   }
 }
 
@@ -248,19 +248,13 @@ void Thermometer::multiBus::loop()
   {
     this->Busses[i]->loop();
   }
-  if (this->next_query && millis() > this->next_query)
+  if ((this->queryInterval > 0) && (millis() - this->last_query) > this->queryInterval)
   {
     this->readTemperatures();
-    if (this->queryInterval)
+    this->last_query += this->queryInterval;
+    if ((millis() - this->last_query) > this->queryInterval)
     {
-      while (millis() > this->next_query)
-      {
-        this->next_query += this->queryInterval;
-      }
-    }
-    else
-    {
-      this->next_query = 0;
+      this->last_query = millis();
     }
   }
 }
@@ -276,9 +270,9 @@ void Thermometer::multiBus::callback(String topic, const String & payload)
       {
         this->Busses[i]->planRescan();
       }
-      if (this->queryInterval)
+      if (this->queryInterval > 0)
       {
-        this->next_query = millis() + this->queryInterval;
+        this->last_query = millis();
       }
     }
   }
