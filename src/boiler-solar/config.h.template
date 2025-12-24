@@ -1,7 +1,6 @@
-#define TOPIC_BOARD_TEMP "boiler-solar/board/temperature"
-#define TOPIC_BOARD_STATUS "boiler-solar/board/status"
-#define TOPIC_BOARD_BUILDVER "boiler-solar/board/build/version"
-#define TOPIC_BOARD_BUILDTIME "boiler-solar/board/build/time"
+#define TOPIC_BOARD_BASE "boiler-solar/board"
+
+#define TOPIC_BOARD_TEMP (TOPIC_BOARD_BASE "/temperature")
 
 #define TOPIC_BASE_HEATER_PWM "boiler-solar/water/pwm"
 #define TOPIC_HEATER_REL_CONTROL "boiler-solar/water/rel/set"
