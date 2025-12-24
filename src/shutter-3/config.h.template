@@ -1,5 +1,5 @@
 #define MQTT_CLIENT_ID "ESP32-Shutter3-dev"
-#define BASE_TOPIC_BOARD "shutter/boards/multi/dev"
+#define TOPIC_BOARD_BASE "shutter/boards/multi/dev"
 #include "hw_config.h"
 
 #define BASE_TOPIC_SHUTTER_A "shutter/3-dev-A"
@@ -41,7 +41,4 @@
 #define TOPIC_RELAIS_A_TEMP (BASE_TOPIC_SHUTTER_A "/temperature")
 #define TOPIC_RELAIS_B_TEMP (BASE_TOPIC_SHUTTER_B "/temperature")
 #define TOPIC_RELAIS_C_TEMP (BASE_TOPIC_SHUTTER_C "/temperature")
-#define TOPIC_BOARD_TEMP (BASE_TOPIC_BOARD "/temperature")
-#define TOPIC_BOARD_STATUS (BASE_TOPIC_BOARD "/status")
-#define TOPIC_BOARD_BUILDVER (BASE_TOPIC_BOARD "/build/version")
-#define TOPIC_BOARD_BUILDTIME (BASE_TOPIC_BOARD "/build/time")
+#define TOPIC_BOARD_TEMP (TOPIC_BOARD_BASE "/temperature")

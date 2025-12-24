@@ -23,7 +23,8 @@ git pull origin --quiet
 
 cd "$SCRIPTPATH/deps/esp8266"
 git fetch origin --tags --quiet
-GIT_TAG=$(git tag | grep -e '^[0-9\.]*$' | tail -1)
+#GIT_TAG=$(git tag | grep -e '^[0-9\.]*$' | tail -1)
+GIT_TAG=3.0.2
 if [[ "$(git describe --tags)" != "$GIT_TAG" ]]; then
   git checkout --quiet tags/$GIT_TAG
   git submodule update --init --quiet
@@ -33,7 +34,8 @@ fi
 
 cd "$SCRIPTPATH/deps/esp32"
 git fetch origin --tags --quiet
-GIT_TAG=$(git tag | grep -e '^[0-9\.]*$' | tail -1)
+#GIT_TAG=$(git tag | grep -e '^[0-9\.]*$' | tail -1)
+GIT_TAG=2.0.2
 if [[ "$(git describe --tags)" != "$GIT_TAG" ]]; then
   git checkout --quiet tags/$GIT_TAG
   git submodule update --init --quiet

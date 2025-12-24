@@ -1,3 +1,5 @@
 #define PAYLOAD_BOARD_AVAIL "online"
 #define PAYLOAD_BOARD_NA "offline"
 #define PAYLOAD_BOARD_OTA "offline -- OTA-update"
+#define PAYLOAD_BOARD_MQTT_REBOOT "offline -- MQTT Reboot"
+#define PAYLOAD_BOARD_MQTT_WIFI "offline -- MQTT Reconnect"

@@ -66,7 +66,7 @@ namespace Thermometer
       singleBus** Busses = nullptr;
       unsigned int N_Busses;
       String topicBase;
-      unsigned long next_query;
+      unsigned long last_query;
       unsigned long queryInterval;
       PubSubClient* mqttClient;
   };
