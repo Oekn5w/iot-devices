@@ -144,14 +144,20 @@ namespace common{
       {
         Serial.println("Rebooting ESP device because of MQTT command!");
         client.publish(TOPIC_BOARD_STATUS, PAYLOAD_BOARD_MQTT_REBOOT, true);
+        delay(50);
         ESP.restart();
       }
+      #if ESP32==1
       else if (strTopic.endsWith("reconnect") && (strcmp(strPayload.c_str(),MQTT_CLIENT_ID) == 0))
       {
         Serial.println("Restarting Wifi!");
         client.publish(TOPIC_BOARD_STATUS, PAYLOAD_BOARD_MQTT_WIFI, true);
+        delay(50);
+        timeClient.end();
         WiFi.disconnect();
+        return;
       }
+      #endif
     }
     mqtt_callback(strTopic, strPayload);
   }
@@ -203,10 +209,14 @@ namespace common{
           client.publish((TOPIC_BOARD_BASE "/build/version"), _BuildInfo.src_version, true);
           String buildtime = String(_BuildInfo.date) + "T" + String(_BuildInfo.time);
           client.publish((TOPIC_BOARD_BASE "/build/time"), buildtime.c_str(), true);
-          client.publish((TOPIC_BOARD_BASE "/clientID"), MQTT_CLIENT_ID, true);
+          client.publish((TOPIC_BOARD_BASE "/info/clientID"), MQTT_CLIENT_ID, true);
+          client.publish((TOPIC_BOARD_BASE "/info/IP"), WiFi.localIP().toString().c_str(), true);
+          client.publish((TOPIC_BOARD_BASE "/info/MAC"), WiFi.macAddress().c_str(), true);
 
           client.subscribe(TOPIC_BOARD_BASE "/command/reboot");
+          #if ESP32==1
           client.subscribe(TOPIC_BOARD_BASE "/command/reconnect");
+          #endif
           mqtt_setup();
           Serial.println("MQTT connected!");
           timevar_mqtt = millis();
